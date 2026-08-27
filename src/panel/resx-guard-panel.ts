@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../models/types';
 import type { ResourceIndex } from '../services/resource-index';
+import { workbookBuffer } from '../services/excel-io';
 
 export class ResxGuardPanel {
   public static current: ResxGuardPanel | undefined;
@@ -102,6 +105,12 @@ export class ResxGuardPanel {
         case 'openInEditor':
           await this.index.openInEditor(msg.familyId, msg.key, msg.locale);
           break;
+        case 'exportExcel':
+          await this.exportExcel();
+          break;
+        case 'importExcel':
+          await this.importExcel();
+          break;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -111,28 +120,93 @@ export class ResxGuardPanel {
     }
   }
 
+  private async exportExcel(): Promise<void> {
+    const pt = vscode.env.language.startsWith('pt');
+    const uri = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file('translations.xlsx'),
+      filters: {
+        Excel: ['xlsx', 'xls'],
+      },
+      saveLabel: pt ? 'Exportar' : 'Export',
+    });
+    if (!uri) {
+      return;
+    }
+    const bookType = uri.fsPath.toLowerCase().endsWith('.xls') ? 'xls' : 'xlsx';
+    const payload = this.index.getExcelPayload();
+    if (payload.rows.length === 0) {
+      void vscode.window.showWarningMessage(
+        pt ? 'Não há traduções selecionadas para exportar.' : 'No translations selected to export.'
+      );
+      return;
+    }
+    const buffer = workbookBuffer(payload, bookType);
+    await fsPromises.writeFile(uri.fsPath, buffer);
+    void vscode.window.showInformationMessage(
+      pt
+        ? `Exportadas ${payload.rows.length} keys para Excel.`
+        : `Exported ${payload.rows.length} keys to Excel.`
+    );
+  }
+
+  private async importExcel(): Promise<void> {
+    const pt = vscode.env.language.startsWith('pt');
+    const picked = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      filters: {
+        Excel: ['xlsx', 'xls'],
+      },
+      openLabel: pt ? 'Importar' : 'Import',
+    });
+    const uri = picked?.[0];
+    if (!uri) {
+      return;
+    }
+    const buffer = await fsPromises.readFile(uri.fsPath);
+    const result = await this.index.importExcelBuffer(buffer);
+    void vscode.window.showInformationMessage(
+      pt
+        ? `Importação concluída: ${result.created} novas, ${result.updated} atualizadas, ${result.skipped} ignoradas.`
+        : `Import finished: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped.`
+    );
+  }
+
   private getHtml(webview: vscode.Webview): string {
-    const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'webview', 'dist', 'assets', 'index.js')
-    );
-    const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'webview', 'dist', 'assets', 'index.css')
-    );
+    const assetsDir = vscode.Uri.joinPath(this.extensionUri, 'webview', 'dist', 'assets');
+    const assetsPath = assetsDir.fsPath;
+
+    let scriptName = 'index.js';
+    let styleName = 'index.css';
+    try {
+      const files = fs.readdirSync(assetsPath);
+      scriptName = files.find((f) => f.endsWith('.js')) ?? scriptName;
+      styleName = files.find((f) => f.endsWith('.css')) ?? styleName;
+    } catch {
+      // fall back to conventional names
+    }
+
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(assetsDir, scriptName));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(assetsDir, styleName));
     const nonce = getNonce();
 
+    // VS Code webviews need cspSource on script-src; avoid type="module" (IIFE build).
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:;" />
+    content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}'; font-src ${webview.cspSource};" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="${styleUri}" />
   <title>ResX Guard</title>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+  <div id="root">
+    <p style="font-family: var(--vscode-font-family); padding: 16px; opacity: 0.7;">
+      Loading ResX Guard…
+    </p>
+  </div>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
   }
@@ -151,8 +225,7 @@ export class ResxGuardPanel {
 export class ResxGuardSidebarProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly onOpen: () => void,
-    private readonly onRefresh: () => void
+    private readonly onOpen: () => void
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -160,10 +233,14 @@ export class ResxGuardSidebarProvider implements vscode.WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     };
-    webviewView.webview.html = `<!DOCTYPE html>
+    const nonce = getNonce();
+    const webview = webviewView.webview;
+    webview.html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
   <style>
     body {
       font-family: var(--vscode-font-family);
@@ -194,20 +271,16 @@ export class ResxGuardSidebarProvider implements vscode.WebviewViewProvider {
   <h2>ResX Guard</h2>
   <p>Manage .resx translations in a fast spreadsheet-style grid.</p>
   <button id="open">Open Manager</button>
-  <button id="refresh" class="secondary">Refresh workspace</button>
-  <script>
+  <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     document.getElementById('open').addEventListener('click', () => vscode.postMessage({ type: 'open' }));
-    document.getElementById('refresh').addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
   </script>
 </body>
 </html>`;
 
-    webviewView.webview.onDidReceiveMessage((msg: { type: string }) => {
+    webview.onDidReceiveMessage((msg: { type: string }) => {
       if (msg.type === 'open') {
         this.onOpen();
-      } else if (msg.type === 'refresh') {
-        this.onRefresh();
       }
     });
   }

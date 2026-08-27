@@ -148,6 +148,7 @@
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
+    "@tanstack/react-virtual": "^3.1.2",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
@@ -160,7 +161,9 @@
     "react-dom": "^18.2.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.12",
-    "vitest": "^1.2.2",
-    "@tanstack/react-virtual": "^3.1.2"
+    "vitest": "^1.2.2"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }

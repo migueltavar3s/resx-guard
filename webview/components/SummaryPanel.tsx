@@ -1,5 +1,6 @@
 import type { ResourceRow } from '../../src/models/types';
 import { t } from '../i18n';
+import { ruleClass, ruleLabel } from '../utils/issueMeta';
 
 const NEUTRAL = '';
 
@@ -14,12 +15,14 @@ function localeLabel(locale: string): string {
 
 export function SummaryPanel({ row, locales }: Props) {
   return (
-    <div>
-      <div className="section-title">{t('summary.title')}</div>
+    <div className="summary-body">
       {!row ? (
-        <p className="hint" style={{ opacity: 0.7, fontSize: 12 }}>
-          {t('summary.noSelection')}
-        </p>
+        <div className="summary-empty">
+          <span className="summary-empty-icon" aria-hidden>
+            ↖
+          </span>
+          <p>{t('summary.noSelection')}</p>
+        </div>
       ) : (
         <>
           <div className="summary-block">
@@ -34,26 +37,29 @@ export function SummaryPanel({ row, locales }: Props) {
 
           <div className="summary-block">
             <div className="section-title">{t('summary.allLocales')}</div>
-            {locales.map((loc) => (
-              <div key={loc || 'neutral'} className="summary-locale">
-                <div className="label">{localeLabel(loc)}</div>
-                <div className="value">{row.values[loc] ?? ''}</div>
-              </div>
-            ))}
+            <div className="summary-locale-grid">
+              {locales.map((loc) => (
+                <div key={loc || 'neutral'} className="summary-locale-card">
+                  <div className="label">{localeLabel(loc)}</div>
+                  <div className="value">{row.values[loc] ?? ''}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="summary-block">
             <div className="section-title">{t('summary.issues')}</div>
             {row.issues.length === 0 ? (
-              <p style={{ fontSize: 12, opacity: 0.7 }}>{t('summary.noIssues')}</p>
+              <p className="summary-ok">{t('summary.noIssues')}</p>
             ) : (
               <ul className="issue-list">
                 {row.issues.map((issue, i) => (
                   <li
                     key={`${issue.rule}-${issue.locale ?? ''}-${i}`}
-                    className={issue.severity === 'error' ? 'error' : ''}
+                    className={`issue-item ${ruleClass(issue.rule)}`}
                   >
-                    {issue.message}
+                    <span className="issue-item-tag">{ruleLabel(issue.rule)}</span>
+                    <span className="issue-item-message">{issue.message}</span>
                   </li>
                 ))}
               </ul>

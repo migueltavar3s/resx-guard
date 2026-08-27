@@ -26,9 +26,15 @@ import {
   validateFamily,
 } from './validation-engine';
 import {
+  buildDesignerEntries,
   resolveDesignerMeta,
   writeDesignerCs,
 } from './designer-generator';
+import {
+  buildExcelPayload,
+  parseWorkbook,
+  type ExcelWorkbookPayload,
+} from './excel-io';
 import { toPascalCaseKey } from './naming';
 
 export class ResourceIndex {
@@ -259,8 +265,7 @@ export class ResourceIndex {
 
     this.rebuildRowsAndValidate();
 
-    // Designer only when neutral changes keys (value alone doesn't need regen, but ok)
-    if (locale === NEUTRAL_LOCALE && this.settings.updateDesignerCs) {
+    if (this.settings.updateDesignerCs) {
       await this.maybeUpdateDesigner(family);
     }
 
@@ -299,6 +304,9 @@ export class ResourceIndex {
     if (!finalKey) {
       finalKey = 'NewKey';
     }
+    if (this.familyHasKey(family, finalKey)) {
+      throw new Error(`Key "${finalKey}" already exists in ${family.displayName}`);
+    }
 
     const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     this.updatingFromUs = true;
@@ -306,6 +314,15 @@ export class ResourceIndex {
       await addResxEntry(filePath, finalKey, neutralValue);
       const parsed = await parseResxFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
+
+      for (const [locale, satellitePath] of Object.entries(family.files)) {
+        if (locale === NEUTRAL_LOCALE || satellitePath === filePath) {
+          continue;
+        }
+        await addResxEntry(satellitePath, finalKey, '');
+        const satellite = await parseResxFile(satellitePath);
+        this.fileCache.set(path.normalize(satellitePath), satellite);
+      }
     } finally {
       setTimeout(() => {
         this.updatingFromUs = false;
@@ -352,10 +369,14 @@ export class ResourceIndex {
     if (!family || !newKey.trim() || oldKey === newKey) {
       return;
     }
+    const trimmed = newKey.trim();
+    if (this.familyHasKey(family, trimmed)) {
+      throw new Error(`Key "${trimmed}" already exists in ${family.displayName}`);
+    }
     this.updatingFromUs = true;
     try {
       for (const filePath of Object.values(family.files)) {
-        await renameResxKey(filePath, oldKey, newKey.trim());
+        await renameResxKey(filePath, oldKey, trimmed);
         try {
           const parsed = await parseResxFile(filePath);
           this.fileCache.set(path.normalize(filePath), parsed);
@@ -394,20 +415,181 @@ export class ResourceIndex {
     }
   }
 
+  getExcelPayload(): ExcelWorkbookPayload {
+    const ids =
+      this.selectedFamilyIds.size > 0
+        ? this.selectedFamilyIds
+        : new Set(this.families.map((f) => f.id));
+    return buildExcelPayload(
+      this.families.filter((f) => ids.has(f.id)),
+      this.rows.filter((r) => ids.has(r.familyId)),
+      this.locales
+    );
+  }
+
+  async importExcelBuffer(buffer: Buffer): Promise<{ created: number; updated: number; skipped: number }> {
+    const payload = parseWorkbook(buffer);
+    return this.importExcelPayload(payload);
+  }
+
+  async importExcelPayload(
+    payload: ExcelWorkbookPayload
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const touched = new Set<string>();
+
+    this.updatingFromUs = true;
+    try {
+      for (const row of payload.rows) {
+        const family = this.resolveFamilyForImport(row.resource);
+        if (!family || !row.key.trim()) {
+          skipped += 1;
+          continue;
+        }
+        const key = row.key.trim();
+        const exists = this.familyHasKey(family, key);
+        if (!exists) {
+          await this.writeKeyToFamily(family, key, row.values);
+          if (row.comment) {
+            const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
+            await setResxComment(filePath, key, row.comment);
+          }
+          created += 1;
+        } else {
+          await this.mergeKeyValues(family, key, row.values);
+          if (row.comment) {
+            const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
+            await setResxComment(filePath, key, row.comment);
+          }
+          updated += 1;
+        }
+        touched.add(family.id);
+        await this.reloadFamilyFiles(family);
+      }
+    } finally {
+      setTimeout(() => {
+        this.updatingFromUs = false;
+      }, 400);
+    }
+
+    this.rebuildRowsAndValidate();
+    if (this.settings.updateDesignerCs) {
+      for (const family of this.families) {
+        if (touched.has(family.id)) {
+          await this.maybeUpdateDesigner(family);
+        }
+      }
+    }
+    this.onDidChangeEmitter.fire();
+    return { created, updated, skipped };
+  }
+
+  private async writeKeyToFamily(
+    family: ResxFamily,
+    key: string,
+    values: Record<string, string>
+  ): Promise<void> {
+    const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
+    await addResxEntry(filePath, key, values[NEUTRAL_LOCALE] ?? '');
+    for (const [locale, satellitePath] of Object.entries(family.files)) {
+      if (locale === NEUTRAL_LOCALE || satellitePath === filePath) {
+        continue;
+      }
+      await addResxEntry(satellitePath, key, values[locale] ?? '');
+    }
+  }
+
+  private async mergeKeyValues(
+    family: ResxFamily,
+    key: string,
+    values: Record<string, string>
+  ): Promise<void> {
+    for (const [locale, value] of Object.entries(values)) {
+      if (value === '') {
+        continue;
+      }
+      let filePath = family.files[locale];
+      if (!filePath && locale !== NEUTRAL_LOCALE) {
+        filePath = this.satellitePath(family.basePath, locale);
+        family.files[locale] = filePath;
+      }
+      if (!filePath) {
+        filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
+      }
+      await setResxValue(filePath, key, value);
+    }
+  }
+
+  private async reloadFamilyFiles(family: ResxFamily): Promise<void> {
+    for (const filePath of Object.values(family.files)) {
+      try {
+        const parsed = await parseResxFile(filePath);
+        this.fileCache.set(path.normalize(filePath), parsed);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  private resolveFamilyForImport(resource: string): ResxFamily | undefined {
+    const name = resource.trim();
+    if (!name) {
+      if (this.selectedFamilyIds.size === 1) {
+        const id = [...this.selectedFamilyIds][0];
+        return this.families.find((f) => f.id === id);
+      }
+      return this.families.length === 1 ? this.families[0] : undefined;
+    }
+    const lower = name.toLowerCase();
+    return (
+      this.families.find((f) => f.displayName === name) ??
+      this.families.find((f) => f.id === name) ??
+      this.families.find((f) => f.displayName.toLowerCase() === lower) ??
+      this.families.find((f) => f.basePath.toLowerCase().endsWith(lower))
+    );
+  }
+
+  private familyHasKey(family: ResxFamily, key: string): boolean {
+    if (this.rows.some((row) => row.familyId === family.id && row.key === key)) {
+      return true;
+    }
+    const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
+    const cached = this.fileCache.get(path.normalize(filePath));
+    return cached?.entries.some((entry) => entry.key === key) ?? false;
+  }
+
   private async maybeUpdateDesigner(family: ResxFamily): Promise<void> {
     const neutralPath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-    const neutral = this.fileCache.get(path.normalize(neutralPath));
-    if (!neutral) {
+    const files: ResxFile[] = [];
+    for (const p of Object.values(family.files)) {
+      const cached = this.fileCache.get(path.normalize(p));
+      if (cached) {
+        files.push(cached);
+      }
+    }
+    if (files.length === 0) {
       return;
     }
     try {
       const meta = await resolveDesignerMeta(neutralPath);
+      const locales = [...new Set(files.map((f) => f.locale))].sort((a, b) => {
+        if (a === NEUTRAL_LOCALE) {
+          return -1;
+        }
+        if (b === NEUTRAL_LOCALE) {
+          return 1;
+        }
+        return a.localeCompare(b);
+      });
       await writeDesignerCs(meta.designerPath, {
         className: meta.className,
         namespace: meta.namespace,
         isPublic: meta.isPublic,
         resourceBaseName: meta.resourceBaseName,
-        entries: neutral.entries,
+        entries: buildDesignerEntries(files),
+        locales,
       });
     } catch (err) {
       console.error('Designer update failed', err);

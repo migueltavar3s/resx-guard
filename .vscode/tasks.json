@@ -2,19 +2,39 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "build",
+      "label": "npm: build",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "build"],
+      "options": {
+        "shell": {
+          "executable": "cmd.exe",
+          "args": ["/d", "/c"]
+        }
+      },
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": ["$esbuild"]
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      }
     },
     {
-      "type": "npm",
-      "script": "watch:ext",
+      "label": "npm: watch:ext",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "watch:ext"],
+      "options": {
+        "shell": {
+          "executable": "cmd.exe",
+          "args": ["/d", "/c"]
+        }
+      },
       "isBackground": true,
-      "problemMatcher": ["$esbuild-watch"],
+      "problemMatcher": [],
       "presentation": {
         "reveal": "never"
       }

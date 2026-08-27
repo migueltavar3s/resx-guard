@@ -12,11 +12,21 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
+    // IIFE loads reliably in VS Code webviews (no type="module" / CSP quirks)
+    cssCodeSplit: false,
     rollupOptions: {
+      input: path.resolve(__dirname, 'index.html'),
       output: {
+        format: 'iife',
         entryFileNames: 'assets/index.js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name][extname]',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'assets/index.css';
+          }
+          return 'assets/[name][extname]';
+        },
+        name: 'ResxGuardWebview',
+        inlineDynamicImports: true,
       },
     },
   },

@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import type { ResxFamily } from '../../src/models/types';
+import type { ResxFamily, ResourceRow } from '../../src/models/types';
 import { t } from '../i18n';
+import { FilterSelect } from './FilterSelect';
 
 interface Props {
   families: ResxFamily[];
+  rows: ResourceRow[];
   keyNaming: 'pascalFromNeutral' | 'manual';
   onCancel: () => void;
   onConfirm: (familyId: string, key: string, neutralValue: string) => void;
@@ -32,7 +34,7 @@ function toPascalCaseKey(input: string): string {
   return result;
 }
 
-export function AddEntryModal({ families, keyNaming, onCancel, onConfirm }: Props) {
+export function AddEntryModal({ families, rows, keyNaming, onCancel, onConfirm }: Props) {
   const [familyId, setFamilyId] = useState(families[0]?.id ?? '');
   const [value, setValue] = useState('');
   const [key, setKey] = useState('');
@@ -43,6 +45,16 @@ export function AddEntryModal({ families, keyNaming, onCancel, onConfirm }: Prop
   const effectiveKey =
     keyNaming === 'pascalFromNeutral' && !keyTouched ? suggested : key;
 
+  const duplicate = useMemo(() => {
+    const needle = effectiveKey.trim();
+    if (!needle) {
+      return false;
+    }
+    return rows.some((row) => row.familyId === familyId && row.key === needle);
+  }, [rows, familyId, effectiveKey]);
+
+  const canSubmit = Boolean(familyId && (effectiveKey.trim() || value.trim()) && !duplicate);
+
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -50,27 +62,12 @@ export function AddEntryModal({ families, keyNaming, onCancel, onConfirm }: Prop
 
         {families.length > 1 && (
           <>
-            <label htmlFor="family">Resource</label>
-            <select
-              id="family"
+            <label htmlFor="family">{t('add.resource')}</label>
+            <FilterSelect
               value={familyId}
-              onChange={(e) => setFamilyId(e.target.value)}
-              style={{
-                width: '100%',
-                marginBottom: 12,
-                padding: '8px 10px',
-                background: 'var(--vscode-input-background)',
-                color: 'var(--vscode-input-foreground)',
-                border: '1px solid var(--vscode-input-border, transparent)',
-                borderRadius: 4,
-              }}
-            >
-              {families.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.displayName}
-                </option>
-              ))}
-            </select>
+              onChange={setFamilyId}
+              options={families.map((f) => ({ value: f.id, label: f.displayName }))}
+            />
           </>
         )}
 
@@ -86,13 +83,15 @@ export function AddEntryModal({ families, keyNaming, onCancel, onConfirm }: Prop
         <label htmlFor="key">{t('add.key')}</label>
         <input
           id="key"
+          className={duplicate ? 'has-error' : ''}
           value={effectiveKey}
           onChange={(e) => {
             setKeyTouched(true);
             setKey(e.target.value);
           }}
         />
-        {keyNaming === 'pascalFromNeutral' && suggested && !keyTouched && (
+        {duplicate && <div className="field-error">{t('add.duplicate', effectiveKey.trim())}</div>}
+        {keyNaming === 'pascalFromNeutral' && suggested && !keyTouched && !duplicate && (
           <div className="suggest-hint">{t('add.suggest')}: {suggested}</div>
         )}
 
@@ -103,8 +102,8 @@ export function AddEntryModal({ families, keyNaming, onCancel, onConfirm }: Prop
           <button
             type="button"
             className="btn primary"
-            disabled={!familyId || (!effectiveKey && !value)}
-            onClick={() => onConfirm(familyId, effectiveKey, value)}
+            disabled={!canSubmit}
+            onClick={() => onConfirm(familyId, effectiveKey.trim(), value)}
           >
             {t('add.confirm')}
           </button>

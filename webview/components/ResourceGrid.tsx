@@ -1,13 +1,39 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { ResourceRow } from '../../src/models/types';
+import type { GridLayout } from '../hooks/usePersistedLayout';
+import {
+  applyColumnResize,
+  columnMin,
+  distributeToWidth,
+  localeWidth,
+} from '../hooks/usePersistedLayout';
 import { t } from '../i18n';
+import { ResizeHandle } from './ResizeHandle';
+import { FilterSelect } from './FilterSelect';
+import { IssueChip } from './IssueChip';
+import { uniqueRules } from '../utils/issueMeta';
+import { autosizeTextarea, estimateRowHeight } from '../utils/rowSize';
+import { usePersistedSet } from '../hooks/usePersistedSet';
 
 const NEUTRAL = '';
 
+export type IssueFilter = 'all' | 'any' | 'warnings' | 'errors';
+
+export interface ColumnFilters {
+  key: string;
+  issues: IssueFilter;
+  locales: Record<string, string>;
+}
+
 interface Props {
   rows: ResourceRow[];
+  allLocales: string[];
   visibleLocales: string[];
+  layout: GridLayout;
+  onLayoutWidths: (widths: GridLayout['widths']) => void;
+  filters: ColumnFilters;
+  onFiltersChange: (filters: ColumnFilters) => void;
   selected: ResourceRow | null;
   onSelect: (row: ResourceRow) => void;
   familyLabel: (familyId: string) => string;
@@ -19,6 +45,14 @@ type FlatItem =
   | { kind: 'group'; familyId: string; label: string; count: number }
   | { kind: 'row'; row: ResourceRow };
 
+type ColumnDef =
+  | { id: 'key'; kind: 'key'; width: number }
+  | { id: 'issues'; kind: 'issues'; width: number }
+  | { id: string; kind: 'locale'; locale: string; width: number };
+
+const ROW_H = 32;
+const GROUP_H = 28;
+
 function localeHeader(locale: string): string {
   return locale === NEUTRAL || locale === '' ? t('column.neutral') : locale;
 }
@@ -26,6 +60,10 @@ function localeHeader(locale: string): string {
 export function ResourceGrid({
   rows,
   visibleLocales,
+  layout,
+  onLayoutWidths,
+  filters,
+  onFiltersChange,
   selected,
   onSelect,
   familyLabel,
@@ -33,6 +71,98 @@ export function ResourceGrid({
   onRenameKey,
 }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [collapsedFamilies, toggleFamilyFold] = usePersistedSet('resxGuard.groupFold.v1');
+  const visible = visibleLocales.length > 0 ? visibleLocales : [NEUTRAL];
+
+  const setParentNode = useCallback((el: HTMLDivElement | null) => {
+    parentRef.current = el;
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    if (!el) {
+      return;
+    }
+    const update = () => setContainerWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    observerRef.current = observer;
+  }, []);
+
+  const preferred = useMemo((): ColumnDef[] => {
+    const cols: ColumnDef[] = [];
+    if (layout.showKey) {
+      cols.push({ id: 'key', kind: 'key', width: layout.widths.key });
+    }
+    if (layout.showIssues) {
+      cols.push({ id: 'issues', kind: 'issues', width: layout.widths.issues });
+    }
+    for (const loc of visible) {
+      cols.push({
+        id: `locale:${loc}`,
+        kind: 'locale',
+        locale: loc,
+        width: localeWidth(layout, loc),
+      });
+    }
+    return cols;
+  }, [layout, visible]);
+
+  const columns = useMemo((): ColumnDef[] => {
+    if (preferred.length === 0) {
+      return [];
+    }
+    const mins = preferred.map((col) => columnMin(col.kind));
+    const minSum = mins.reduce((sum, min) => sum + min, 0);
+    const available = Math.max(containerWidth, minSum);
+    const displayed = distributeToWidth(
+      preferred.map((col) => col.width),
+      mins,
+      available || minSum
+    );
+    return preferred.map((col, i) => ({ ...col, width: displayed[i] ?? col.width }));
+  }, [preferred, containerWidth]);
+
+  const persistWidths = useCallback(
+    (next: ColumnDef[]) => {
+      const locales: Record<string, number> = { ...layout.widths.locales };
+      let key = layout.widths.key;
+      let issues = layout.widths.issues;
+      for (const col of next) {
+        if (col.kind === 'key') {
+          key = col.width;
+        } else if (col.kind === 'issues') {
+          issues = col.width;
+        } else {
+          locales[col.locale] = col.width;
+        }
+      }
+      onLayoutWidths({ key, issues, locales });
+    },
+    [layout.widths, onLayoutWidths]
+  );
+
+  const resizeColumn = useCallback(
+    (columnId: string, delta: number) => {
+      const index = columns.findIndex((c) => c.id === columnId);
+      if (index < 0) {
+        return;
+      }
+      const mins = columns.map((col) => columnMin(col.kind));
+      const minSum = mins.reduce((sum, min) => sum + min, 0);
+      const available = Math.max(containerWidth, minSum);
+      const displayed = applyColumnResize(
+        columns.map((col) => col.width),
+        mins,
+        index,
+        delta,
+        available
+      );
+      persistWidths(columns.map((col, i) => ({ ...col, width: displayed[i] ?? col.width })));
+    },
+    [columns, containerWidth, persistWidths]
+  );
 
   const flat = useMemo(() => {
     const items: FlatItem[] = [];
@@ -63,50 +193,140 @@ export function ResourceGrid({
         });
       }
       groupCount++;
-      items.push({ kind: 'row', row });
+      if (!collapsedFamilies.has(row.familyId)) {
+        items.push({ kind: 'row', row });
+      }
     }
     flush();
     return items;
-  }, [rows, familyLabel]);
+  }, [rows, familyLabel, collapsedFamilies]);
 
-  const locales = visibleLocales.length > 0 ? visibleLocales : [NEUTRAL];
-
-  const keyWidth = 200;
-  const issueWidth = 36;
-  const colWidth = 220;
-  const rowWidth = keyWidth + issueWidth + locales.length * colWidth;
+  const rowWidth = columns.reduce((sum, c) => sum + c.width, 0);
+  const gridCols = columns.map((c) => `${c.width}px`).join(' ');
+  const colWidths = columns.map((c) => c.width);
 
   const virtualizer = useVirtualizer({
     count: flat.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (i) => (flat[i]?.kind === 'group' ? 34 : 42),
-    overscan: 20,
+    estimateSize: (i) => {
+      const item = flat[i];
+      if (!item || item.kind === 'group') {
+        return GROUP_H;
+      }
+      const texts = columns.map((col) => {
+        if (col.kind === 'key') {
+          return item.row.key;
+        }
+        if (col.kind === 'issues') {
+          return item.row.issues.map((issue) => issue.rule).join(' ');
+        }
+        return item.row.values[col.locale] ?? '';
+      });
+      return estimateRowHeight(texts, colWidths);
+    },
+    measureElement: (el) => el.getBoundingClientRect().height,
+    overscan: 12,
+    getItemKey: (i) => {
+      const item = flat[i];
+      if (!item) {
+        return i;
+      }
+      return item.kind === 'group' ? `g:${item.familyId}` : `r:${item.row.familyId}:${item.row.key}`;
+    },
   });
 
+  const bindRow = useCallback(
+    (index: number) => (el: HTMLDivElement | null) => {
+      if (!el) {
+        return;
+      }
+      el.setAttribute('data-index', String(index));
+      virtualizer.measureElement(el);
+    },
+    [virtualizer]
+  );
+
+  const setKeyFilter = (key: string) => onFiltersChange({ ...filters, key });
+  const setIssueFilter = (issues: IssueFilter) => onFiltersChange({ ...filters, issues });
+  const setLocaleFilter = (locale: string, value: string) =>
+    onFiltersChange({
+      ...filters,
+      locales: { ...filters.locales, [locale]: value },
+    });
+
   if (rows.length === 0) {
-    return <div className="empty">{t('empty.grid')}</div>;
+    return (
+      <div className="grid-wrap" ref={setParentNode}>
+        <div className="empty">{t('empty.grid')}</div>
+      </div>
+    );
   }
 
+  if (columns.length === 0) {
+    return <div className="empty">{t('columns.noneVisible')}</div>;
+  }
+
+  const renderHeaderCell = (col: ColumnDef, rowKind: 'title' | 'filter') => {
+    if (col.kind === 'key') {
+      return rowKind === 'title' ? (
+        t('column.key')
+      ) : (
+        <input
+          className="col-filter"
+          type="search"
+          placeholder={t('filter.column')}
+          value={filters.key}
+          onChange={(e) => setKeyFilter(e.target.value)}
+        />
+      );
+    }
+    if (col.kind === 'issues') {
+      return rowKind === 'title' ? (
+        t('column.issues')
+      ) : (
+        <FilterSelect
+          value={filters.issues}
+          onChange={setIssueFilter}
+          options={[
+            { value: 'all', label: t('filter.issues.all') },
+            { value: 'any', label: t('filter.issues.any') },
+            { value: 'warnings', label: t('filter.issues.warnings') },
+            { value: 'errors', label: t('filter.issues.errors') },
+          ]}
+        />
+      );
+    }
+    return rowKind === 'title' ? (
+      localeHeader(col.locale)
+    ) : (
+      <input
+        className="col-filter"
+        type="search"
+        placeholder={t('filter.column')}
+        value={filters.locales[col.locale] ?? ''}
+        onChange={(e) => setLocaleFilter(col.locale, e.target.value)}
+      />
+    );
+  };
+
   return (
-    <div className="grid-wrap" ref={parentRef}>
-      <div style={{ minWidth: rowWidth }}>
-        <div
-          className="grid-header"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `${keyWidth}px ${issueWidth}px repeat(${locales.length}, ${colWidth}px)`,
-            position: 'sticky',
-            top: 0,
-            zIndex: 3,
-            background: 'var(--vscode-editor-background)',
-            borderBottom: '1px solid var(--vscode-panel-border, rgba(128,128,128,0.35))',
-          }}
-        >
-          <div className="grid-th">{t('column.key')}</div>
-          <div className="grid-th">!</div>
-          {locales.map((loc) => (
-            <div key={loc || 'neutral'} className="grid-th">
-              {localeHeader(loc)}
+    <div className="grid-wrap" ref={setParentNode} tabIndex={0}>
+      <div className="grid-inner" style={{ width: rowWidth }}>
+        <div className="grid-header-block" style={{ width: rowWidth }}>
+          {(['title', 'filter'] as const).map((rowKind) => (
+            <div
+              key={rowKind}
+              className={`grid-header-row grid-header-${rowKind === 'title' ? 'titles' : 'filters'}`}
+              style={{ gridTemplateColumns: gridCols }}
+            >
+              {columns.map((col) => (
+                <div key={`${rowKind}-${col.id}`} className="grid-th grid-th-resizable">
+                  {renderHeaderCell(col, rowKind)}
+                  {rowKind === 'title' && (
+                    <ResizeHandle onResize={(d) => resizeColumn(col.id, d)} />
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -129,14 +349,37 @@ export function ResourceGrid({
               top: 0,
               left: 0,
               width: '100%',
-              height: vItem.size,
               transform: `translateY(${vItem.start}px)`,
             };
 
             if (item.kind === 'group') {
+              const folded = collapsedFamilies.has(item.familyId);
               return (
-                <div key={`g-${item.familyId}`} className="grid-group" style={style}>
-                  {item.label} · {t('group.entries', String(item.count))}
+                <div
+                  key={`g-${item.familyId}`}
+                  ref={bindRow(vItem.index)}
+                  data-index={vItem.index}
+                  className={`grid-group${folded ? ' collapsed' : ''}`}
+                  style={{ ...style, height: GROUP_H }}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={!folded}
+                  aria-label={
+                    folded
+                      ? t('tree.expand', item.label)
+                      : t('tree.collapse', item.label)
+                  }
+                  onClick={() => toggleFamilyFold(item.familyId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleFamilyFold(item.familyId);
+                    }
+                  }}
+                >
+                  <span className={`tree-twistie${folded ? ' collapsed' : ''}`} aria-hidden />
+                  <span className="grid-group-label">{item.label}</span>
+                  <span className="grid-group-count">{item.count}</span>
                 </div>
               );
             }
@@ -144,58 +387,22 @@ export function ResourceGrid({
             const { row } = item;
             const isSelected =
               selected?.familyId === row.familyId && selected?.key === row.key;
-            const hasError = row.issues.some((i) => i.severity === 'error');
-            const hasWarn = row.issues.length > 0;
 
             return (
-              <div
+              <GridDataRow
                 key={`${row.familyId}:${row.key}`}
-                className={`grid-row ${isSelected ? 'row-selected' : ''}`}
-                style={{
-                  ...style,
-                  display: 'grid',
-                  gridTemplateColumns: `${keyWidth}px ${issueWidth}px repeat(${locales.length}, ${colWidth}px)`,
-                }}
-                onClick={() => onSelect(row)}
-              >
-                <div className="grid-cell key">
-                  <EditableText
-                    value={row.key}
-                    onCommit={(newKey) => {
-                      if (newKey && newKey !== row.key) {
-                        onRenameKey(row.familyId, row.key, newKey);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="grid-cell issues">
-                  {hasWarn && (
-                    <span
-                      className={`issue-badge ${hasError ? 'error' : ''}`}
-                      title={row.issues.map((i) => i.message).join('\n')}
-                    >
-                      {hasError ? '✕' : '!'}
-                    </span>
-                  )}
-                </div>
-                {locales.map((loc) => {
-                  const localeIssues = row.issues.filter((i) => i.locale === loc);
-                  return (
-                    <div
-                      key={loc || 'neutral'}
-                      className={`grid-cell ${localeIssues.length ? 'has-issue' : ''}`}
-                    >
-                      <EditableText
-                        value={row.values[loc] ?? ''}
-                        multiline
-                        onCommit={(value) =>
-                          onUpdateCell(row.familyId, row.key, loc, value)
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                index={vItem.index}
+                virtualizer={virtualizer}
+                row={row}
+                isSelected={isSelected}
+                style={style}
+                gridCols={gridCols}
+                columns={columns}
+                colWidths={colWidths}
+                onSelect={onSelect}
+                onUpdateCell={onUpdateCell}
+                onRenameKey={onRenameKey}
+              />
             );
           })}
         </div>
@@ -204,66 +411,200 @@ export function ResourceGrid({
   );
 }
 
+function GridDataRow({
+  index,
+  virtualizer,
+  row,
+  isSelected,
+  style,
+  gridCols,
+  columns,
+  colWidths,
+  onSelect,
+  onUpdateCell,
+  onRenameKey,
+}: {
+  index: number;
+  virtualizer: { measureElement: (el: Element | null) => void };
+  row: ResourceRow;
+  isSelected: boolean;
+  style: CSSProperties;
+  gridCols: string;
+  columns: ColumnDef[];
+  colWidths: number[];
+  onSelect: (row: ResourceRow) => void;
+  onUpdateCell: (familyId: string, key: string, locale: string, value: string) => void;
+  onRenameKey: (familyId: string, oldKey: string, newKey: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    virtualizer.measureElement(el);
+    const observer = new ResizeObserver(() => virtualizer.measureElement(el));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [index, virtualizer, row.key, row.values, row.issues, colWidths]);
+
+  return (
+    <div
+      ref={ref}
+      data-index={index}
+      className={`grid-row ${isSelected ? 'row-selected' : ''}`}
+      style={{
+        ...style,
+        display: 'grid',
+        gridTemplateColumns: gridCols,
+      }}
+      onMouseDown={() => onSelect(row)}
+      onClick={() => onSelect(row)}
+    >
+      {columns.map((col) => {
+        if (col.kind === 'key') {
+          return (
+            <div key={col.id} className="grid-cell key">
+            <EditableText
+                value={row.key}
+                columnWidth={col.width}
+                onActivate={() => onSelect(row)}
+                onCommit={(newKey) => {
+                  if (newKey && newKey !== row.key) {
+                    onRenameKey(row.familyId, row.key, newKey);
+                  }
+                }}
+              />
+            </div>
+          );
+        }
+        if (col.kind === 'issues') {
+          return (
+            <div key={col.id} className="grid-cell issues">
+              <IssueIndicators row={row} />
+            </div>
+          );
+        }
+        return (
+          <div key={col.id} className="grid-cell">
+            <EditableText
+              value={row.values[col.locale] ?? ''}
+              columnWidth={col.width}
+              onActivate={() => onSelect(row)}
+              onCommit={(value) => {
+                if (value !== (row.values[col.locale] ?? '')) {
+                  onUpdateCell(row.familyId, row.key, col.locale, value);
+                }
+              }}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function IssueIndicators({ row }: { row: ResourceRow }) {
+  if (row.issues.length === 0) {
+    return <span className="issue-empty" aria-hidden>—</span>;
+  }
+  const rules = uniqueRules(row.issues);
+  return (
+    <div className="issue-chips">
+      {rules.map((rule) => {
+        const ofRule = row.issues.filter((i) => i.rule === rule);
+        return <IssueChip key={rule} rule={rule} issues={ofRule} count={ofRule.length} />;
+      })}
+    </div>
+  );
+}
+
 function EditableText({
   value,
   onCommit,
-  multiline,
+  onActivate,
+  columnWidth,
 }: {
   value: string;
   onCommit: (v: string) => void;
-  multiline?: boolean;
+  onActivate?: () => void;
+  columnWidth?: number;
 }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const skipCommit = useRef(false);
+  const pending = useRef<string | null>(null);
   const [draft, setDraft] = useState(value);
   const [focused, setFocused] = useState(false);
+  const display = focused || pending.current !== null ? draft : value;
 
   useEffect(() => {
+    if (pending.current !== null) {
+      if (value === pending.current) {
+        pending.current = null;
+        setDraft(value);
+      }
+      return;
+    }
     if (!focused) {
       setDraft(value);
     }
   }, [value, focused]);
 
-  const display = focused ? draft : value;
-  const useTextarea = multiline && (display.includes('\n') || display.length > 70 || focused);
-
-  if (useTextarea) {
-    return (
-      <textarea
-        className="cell-textarea"
-        rows={Math.min(5, Math.max(2, display.split('\n').length))}
-        value={display}
-        onFocus={() => {
-          setFocused(true);
-          setDraft(value);
-        }}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          setFocused(false);
-          onCommit(draft);
-        }}
-        onClick={(e) => e.stopPropagation()}
-      />
-    );
-  }
+  useLayoutEffect(() => {
+    if (ref.current) {
+      autosizeTextarea(ref.current, ROW_H);
+    }
+  }, [display, columnWidth]);
 
   return (
-    <input
-      className="cell-input"
+    <textarea
+      ref={ref}
+      className="cell-textarea"
+      rows={1}
       value={display}
       onFocus={() => {
         setFocused(true);
-        setDraft(value);
+        setDraft(pending.current ?? value);
+        onActivate?.();
       }}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
+      onChange={(e) => {
+        setDraft(e.target.value);
+        autosizeTextarea(e.target, ROW_H);
+      }}
+      onBlur={(e) => {
         setFocused(false);
-        onCommit(multiline ? draft : draft.trim());
+        if (skipCommit.current) {
+          skipCommit.current = false;
+          pending.current = null;
+          setDraft(value);
+          return;
+        }
+        const next = e.currentTarget.value;
+        if (next === value) {
+          pending.current = null;
+          return;
+        }
+        pending.current = next;
+        setDraft(next);
+        onCommit(next);
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          (e.target as HTMLInputElement).blur();
+        if (e.key === 'Delete') {
+          return;
+        }
+        e.stopPropagation();
+        if (e.key === 'Escape') {
+          skipCommit.current = true;
+          pending.current = null;
+          setDraft(value);
+          e.currentTarget.blur();
+        }
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          e.currentTarget.blur();
         }
       }}
-      onClick={(e) => e.stopPropagation()}
     />
   );
 }

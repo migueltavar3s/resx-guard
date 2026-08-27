@@ -29,7 +29,14 @@ npm run build
 npm test
 ```
 
-Press **F5** to launch the Extension Development Host with the sample fixture project.
+### Test the UI (one step)
+
+1. Open this repo in VS Code / Cursor  
+2. Press **F5** (or Run and Debug → **Run Extension (sample project)**)  
+3. A new Extension Development Host window opens with `fixtures/sample-project`  
+4. The ResX Guard panel should open automatically with Neutral + `pt` columns  
+
+In the left tree, check/uncheck `Resources` / `Messages` to filter. Click a row to see **Summary** with all languages.
 
 ## Settings
 

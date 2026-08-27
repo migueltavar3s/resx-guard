@@ -6,69 +6,85 @@ interface Props {
   onChange: (partial: Partial<ExtensionSettings>) => void;
 }
 
+const RULES = [
+  'keyPascalCase',
+  'matchingSuffix',
+  'placeholders',
+  'missingTranslation',
+  'duplicateKeys',
+] as const;
+
 export function SettingsPage({ settings, onChange }: Props) {
   return (
-    <>
-      <h2>{t('settings.title')}</h2>
+    <div className="settings">
+      <header className="settings-hero">
+        <h2>{t('settings.title')}</h2>
+        <p className="hint">{t('settings.hint')}</p>
+      </header>
 
-      <div className="setting-group">
-        <h3>{t('settings.keyNaming')}</h3>
-        <label className="setting-row">
-          <input
-            type="radio"
-            name="keyNaming"
-            checked={settings.keyNaming === 'pascalFromNeutral'}
-            onChange={() => onChange({ keyNaming: 'pascalFromNeutral' })}
-          />
-          <span>{t('settings.keyNaming.pascal')}</span>
-        </label>
-        <label className="setting-row">
-          <input
-            type="radio"
-            name="keyNaming"
-            checked={settings.keyNaming === 'manual'}
-            onChange={() => onChange({ keyNaming: 'manual' })}
-          />
-          <span>{t('settings.keyNaming.manual')}</span>
-        </label>
-      </div>
+      <section className="setting-card">
+        <div className="setting-card-head">
+          <h3>{t('settings.keyNaming')}</h3>
+          <p>{t('settings.keyNaming.hint')}</p>
+        </div>
+        <div className="segmented" role="radiogroup" aria-label={t('settings.keyNaming')}>
+          <button
+            type="button"
+            className={settings.keyNaming === 'pascalFromNeutral' ? 'on' : ''}
+            onClick={() => onChange({ keyNaming: 'pascalFromNeutral' })}
+          >
+            {t('settings.keyNaming.pascal')}
+          </button>
+          <button
+            type="button"
+            className={settings.keyNaming === 'manual' ? 'on' : ''}
+            onClick={() => onChange({ keyNaming: 'manual' })}
+          >
+            {t('settings.keyNaming.manual')}
+          </button>
+        </div>
+      </section>
 
-      <div className="setting-group">
-        <label className="setting-row">
+      <section className="setting-card">
+        <label className="toggle-row">
+          <span>
+            <span className="toggle-title">{t('settings.designer')}</span>
+            <span className="toggle-hint">{t('settings.designer.hint')}</span>
+          </span>
           <input
             type="checkbox"
             checked={settings.updateDesignerCs}
             onChange={(e) => onChange({ updateDesignerCs: e.target.checked })}
           />
-          <span>{t('settings.designer')}</span>
+          <span className="toggle-track" aria-hidden />
         </label>
-      </div>
+      </section>
 
-      <div className="setting-group">
-        <h3>{t('settings.rules')}</h3>
-        {(
-          [
-            'keyPascalCase',
-            'matchingSuffix',
-            'placeholders',
-            'missingTranslation',
-            'duplicateKeys',
-          ] as const
-        ).map((rule) => (
-          <label key={rule} className="setting-row">
-            <input
-              type="checkbox"
-              checked={settings.rules[rule]}
-              onChange={(e) =>
-                onChange({
-                  rules: { ...settings.rules, [rule]: e.target.checked },
-                })
-              }
-            />
-            <span>{t(`settings.rules.${rule}`)}</span>
-          </label>
-        ))}
-      </div>
-    </>
+      <section className="setting-card">
+        <div className="setting-card-head">
+          <h3>{t('settings.rules')}</h3>
+          <p>{t('settings.rules.hint')}</p>
+        </div>
+        <div className="setting-toggles">
+          {RULES.map((rule) => (
+            <label key={rule} className="toggle-row">
+              <span>
+                <span className="toggle-title">{t(`settings.rules.${rule}`)}</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.rules[rule]}
+                onChange={(e) =>
+                  onChange({
+                    rules: { ...settings.rules, [rule]: e.target.checked },
+                  })
+                }
+              />
+              <span className="toggle-track" aria-hidden />
+            </label>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

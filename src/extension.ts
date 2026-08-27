@@ -34,9 +34,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
-  const sidebar = new ResxGuardSidebarProvider(context.extensionUri, openPanel, () => {
-    void refresh();
-  });
+  const sidebar = new ResxGuardSidebarProvider(context.extensionUri, openPanel);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('resxGuard.sidebar', sidebar)
   );
@@ -68,6 +66,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void refresh();
     })
   );
+
+  // Open the manager automatically in Extension Development / first use with .resx files
+  const snap = index.getSnapshot(vscode.env.language.startsWith('pt') ? 'pt' : 'en');
+  if (snap.families.length > 0) {
+    openPanel();
+  } else {
+    void vscode.window.showInformationMessage(
+      'ResX Guard is active. Open a folder with .resx files, then run “ResX Guard: Open”.',
+      'Open'
+    ).then((choice) => {
+      if (choice === 'Open') {
+        openPanel();
+      }
+    });
+  }
 }
 
 export function deactivate(): void {

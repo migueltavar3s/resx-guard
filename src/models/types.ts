@@ -111,4 +111,6 @@ export type WebviewToHostMessage =
   | { type: 'renameKey'; familyId: string; oldKey: string; newKey: string }
   | { type: 'updateSettings'; settings: Partial<ExtensionSettings> }
   | { type: 'refresh' }
-  | { type: 'openInEditor'; familyId: string; key: string; locale?: string };
+  | { type: 'openInEditor'; familyId: string; key: string; locale?: string }
+  | { type: 'exportExcel' }
+  | { type: 'importExcel' };
