@@ -1,0 +1,14 @@
+{
+  "resxGuard.command.open": "ResX Guard: Open",
+  "resxGuard.command.refresh": "ResX Guard: Refresh",
+  "resxGuard.view.sidebar": "ResX Guard",
+  "resxGuard.config.neutralLocale": "Neutral/base locale label (empty = uncultured .resx)",
+  "resxGuard.config.keyNaming": "How resource keys are suggested from the neutral value",
+  "resxGuard.config.updateDesignerCs": "Automatically update Resources.Designer.cs when keys change",
+  "resxGuard.config.visibleLocales": "Locales shown as grid columns (empty = all)",
+  "resxGuard.config.rules.keyPascalCase": "Warn when key is not PascalCase of the neutral English value",
+  "resxGuard.config.rules.matchingSuffix": "Warn when translations do not end like the neutral string",
+  "resxGuard.config.rules.placeholders": "Warn when {0}/{name} placeholders differ from neutral",
+  "resxGuard.config.rules.missingTranslation": "Warn when a translation is missing for a locale",
+  "resxGuard.config.rules.duplicateKeys": "Error when duplicate keys exist in the same file"
+}

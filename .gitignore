@@ -1,0 +1,9 @@
+node_modules/
+dist/
+webview/dist/
+*.vsix
+.DS_Store
+*.log
+.vscode-test/
+coverage/
+*.tsbuildinfo
