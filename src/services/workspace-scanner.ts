@@ -1,6 +1,6 @@
 import * as path from 'path';
 import type { ResxFamily, TreeNode } from '../models/types';
-import { getBaseName, parseLocaleFromFileName } from './naming';
+import { normalizePathKey, resolveResxIdentity } from './naming';
 
 export interface ScannedWorkspace {
   families: ResxFamily[];
@@ -18,27 +18,26 @@ export function groupResxFiles(
     string,
     { basePath: string; files: Record<string, string>; dir: string; baseName: string }
   >();
+  const allNormalizedPaths = new Set(files.map((f) => normalizePathKey(f)));
 
   for (const filePath of files) {
     const normalized = path.normalize(filePath);
-    const fileName = path.basename(normalized);
-    const dir = path.dirname(normalized);
-    const locale = parseLocaleFromFileName(fileName);
-    const baseName = getBaseName(fileName);
-    const familyKey = path.join(dir, baseName).toLowerCase();
+    const identity = resolveResxIdentity(filePath, allNormalizedPaths);
+    const familyKey = `${normalizePathKey(identity.familyDir)}||${identity.baseName.toLowerCase()}`;
+    const displayDir = identity.familyDir.replace(/\//g, path.sep);
 
     let group = byKey.get(familyKey);
     if (!group) {
       group = {
         basePath: '',
         files: {},
-        dir,
-        baseName,
+        dir: displayDir,
+        baseName: identity.baseName,
       };
       byKey.set(familyKey, group);
     }
-    group.files[locale] = normalized;
-    if (!locale) {
+    group.files[identity.locale] = normalized;
+    if (!identity.locale) {
       group.basePath = normalized;
     }
   }
@@ -55,9 +54,9 @@ export function groupResxFiles(
   for (const [key, group] of byKey) {
     const projectName = resolveProjectName(group.dir, workspaceFolders);
     const relDir = relativeDisplayDir(group.dir, workspaceFolders);
-    const displayName = relDir
-      ? `${relDir.replace(/\\/g, '/')}/${group.baseName}`
-      : group.baseName;
+    const rel = relDir.replace(/\\/g, '/');
+    const label = group.baseName || path.basename(rel || group.dir) || '(resources)';
+    const displayName = group.baseName ? (rel ? `${rel}/${group.baseName}` : group.baseName) : rel || label;
 
     families.push({
       id: key,

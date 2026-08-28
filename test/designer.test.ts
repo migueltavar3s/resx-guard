@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { generateDesignerCs } from '../src/services/designer-generator';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
+import {
+  designerTypeNamespace,
+  generateDesignerCs,
+  resolveDesignerMeta,
+} from '../src/services/designer-generator';
 
 describe('designer generator', () => {
   it('emits auto-generated strongly typed resources', () => {
@@ -54,5 +61,64 @@ describe('designer generator', () => {
     });
     expect(cs).toContain('public class Resources');
     expect(cs).toContain('public static string A');
+  });
+});
+
+describe('designer namespace from project folder', () => {
+  it('appends nested folders to RootNamespace like Visual Studio', () => {
+    expect(designerTypeNamespace('MyApp', 'Properties')).toBe('MyApp.Properties');
+    expect(designerTypeNamespace('MyApp', 'Features/Checkout')).toBe('MyApp.Features.Checkout');
+    expect(designerTypeNamespace('MyApp', '.')).toBe('MyApp');
+    expect(designerTypeNamespace('MyApp.Properties', 'Properties')).toBe('MyApp.Properties');
+  });
+
+  it('resolves namespace for a nested resx from the csproj RootNamespace', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'resx-guard-ns-'));
+    await fs.writeFile(
+      path.join(root, 'MyApp.csproj'),
+      `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>MyApp</RootNamespace>
+  </PropertyGroup>
+</Project>
+`
+    );
+    const nested = path.join(root, 'Features', 'Checkout');
+    await fs.mkdir(nested, { recursive: true });
+    const resx = path.join(nested, 'Strings.resx');
+    await fs.writeFile(resx, '<root/>', 'utf8');
+
+    const meta = await resolveDesignerMeta(resx);
+    expect(meta.namespace).toBe('MyApp.Features.Checkout');
+    expect(meta.className).toBe('Strings');
+    expect(meta.resourceBaseName).toBe('MyApp.Features.Checkout.Strings');
+    expect(meta.designerPath).toBe(path.join(nested, 'Strings.Designer.cs'));
+  });
+
+  it('honors CustomToolNamespace when set on the embedded resource', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'resx-guard-custom-ns-'));
+    await fs.writeFile(
+      path.join(root, 'MyApp.csproj'),
+      `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>MyApp</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <CustomToolNamespace>MyApp.Special</CustomToolNamespace>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>
+`
+    );
+    const dir = path.join(root, 'Properties');
+    await fs.mkdir(dir, { recursive: true });
+    const resx = path.join(dir, 'Resources.resx');
+    await fs.writeFile(resx, '<root/>', 'utf8');
+
+    const meta = await resolveDesignerMeta(resx);
+    expect(meta.namespace).toBe('MyApp.Special');
+    expect(meta.resourceBaseName).toBe('MyApp.Special.Resources');
   });
 });

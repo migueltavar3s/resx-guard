@@ -34,7 +34,7 @@ describe('fixture sample-project', () => {
     expect(Array.isArray(issues)).toBe(true);
 
     const meta = await resolveDesignerMeta(neutral);
-    expect(meta.namespace).toBe('SampleProject');
+    expect(meta.namespace).toBe('SampleProject.Properties');
     const cs = generateDesignerCs({
       ...meta,
       entries: buildDesignerEntries(files),

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SampleProject {
+namespace SampleProject.Properties {
     using System;
 
 

@@ -30,7 +30,7 @@ import {
   resolveDesignerMeta,
   writeDesignerCs,
 } from './designer-generator';
-import { toPascalCaseKey } from './naming';
+import { resolveResxIdentity, toPascalCaseKey } from './naming';
 import { mergeVisibleLocales } from './locale-columns';
 
 export class ResourceIndex {
@@ -95,8 +95,7 @@ export class ResourceIndex {
     for (const folder of folders) {
       const found = await vscode.workspace.findFiles(
         new vscode.RelativePattern(folder, '**/*.resx'),
-        '**/node_modules/**',
-        5000
+        '{**/node_modules/**,**/bin/**,**/obj/**,**/.git/**}'
       );
       uris.push(...found);
     }
@@ -443,10 +442,10 @@ export class ResourceIndex {
   private async maybeUpdateDesigner(family: ResxFamily): Promise<void> {
     const neutralPath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     const files: ResxFile[] = [];
-    for (const p of Object.values(family.files)) {
-      const cached = this.fileCache.get(path.normalize(p));
+    for (const [locale, filePath] of Object.entries(family.files)) {
+      const cached = this.fileCache.get(path.normalize(filePath));
       if (cached) {
-        files.push(cached);
+        files.push({ ...cached, locale });
       }
     }
     if (files.length === 0) {
@@ -484,14 +483,12 @@ export class ResourceIndex {
       const files: ResxFile[] = [];
       for (const [locale, filePath] of Object.entries(family.files)) {
         const cached = this.fileCache.get(path.normalize(filePath));
-        files.push(
-          cached ?? {
-            path: filePath,
-            locale,
-            entries: [],
-            duplicateKeys: [],
-          }
-        );
+        files.push({
+          path: cached?.path ?? filePath,
+          locale,
+          entries: cached?.entries ?? [],
+          duplicateKeys: cached?.duplicateKeys ?? [],
+        });
       }
       const rows = buildRows(family, files);
       const issues = validateFamily(family, files, this.settings.rules);
@@ -563,8 +560,11 @@ export class ResourceIndex {
       return basePath;
     }
     const dir = path.dirname(basePath);
-    const base = path.basename(basePath, '.resx');
-    return path.join(dir, `${base}.${locale}.resx`);
+    const identity = resolveResxIdentity(basePath);
+    if (!identity.baseName) {
+      return path.join(dir, `${locale}.resx`);
+    }
+    return path.join(dir, `${identity.baseName}.${locale}.resx`);
   }
 
   private readSettings(): ExtensionSettings {

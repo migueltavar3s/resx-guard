@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as path from 'path';
 import {
   attachIssuesToRows,
   buildRows,
@@ -94,6 +95,8 @@ describe('validation engine', () => {
 });
 
 describe('workspace scanner', () => {
+  const folders = [{ name: 'ws', uri: { fsPath: 'C:/ws' } }];
+
   it('groups neutral and satellite files', () => {
     const { families } = groupResxFiles(
       [
@@ -101,12 +104,60 @@ describe('workspace scanner', () => {
         'C:/ws/Properties/Resources.pt.resx',
         'C:/ws/Other/Messages.resx',
       ],
-      [{ name: 'ws', uri: { fsPath: 'C:/ws' } }]
+      folders
     );
     expect(families).toHaveLength(2);
     const resources = families.find((f) => f.displayName.includes('Resources'));
     expect(resources?.files['']).toBeTruthy();
     expect(resources?.files.pt).toBeTruthy();
+  });
+
+  it('keeps App.Web.resx as its own family and groups aspx + underscore cultures', () => {
+    const { families } = groupResxFiles(
+      [
+        'C:/ws/App.Web.resx',
+        'C:/ws/App.resx',
+        'C:/ws/Views/Default.aspx.resx',
+        'C:/ws/Views/Default.aspx.pt.resx',
+        'C:/ws/Lang/Resources.pt_PT.resx',
+        'C:/ws/Lang/Resources.resx',
+        'C:/ws/Forms/Form.cs.resx',
+      ],
+      folders
+    );
+    const web = families.find((f) => f.displayName.endsWith('App.Web'));
+    expect(web?.files['']).toBeTruthy();
+    expect(web?.files.web).toBeUndefined();
+
+    const aspx = families.find((f) => f.displayName.includes('Default.aspx'));
+    expect(aspx?.files['']).toBeTruthy();
+    expect(aspx?.files.pt).toBeTruthy();
+
+    const lang = families.find((f) => f.displayName.includes('Lang/Resources'));
+    expect(lang?.files['pt-PT']).toBeTruthy();
+
+    const formCs = families.find((f) => f.displayName.includes('Form.cs'));
+    expect(formCs?.files['']).toBeTruthy();
+    expect(formCs?.files.cs).toBeUndefined();
+  });
+
+  it('groups culture-named files in the same folder and folder-based pt satellites', () => {
+    const { families } = groupResxFiles(
+      [
+        'C:/ws/i18n/en.resx',
+        'C:/ws/i18n/pt.resx',
+        'C:/ws/Properties/Resources.resx',
+        'C:/ws/Properties/pt/Resources.resx',
+      ],
+      folders
+    );
+    const i18n = families.find((f) => Object.keys(f.files).includes('pt') && Object.keys(f.files).includes('en'));
+    expect(i18n?.files.pt).toContain('pt.resx');
+    expect(i18n?.files.en).toContain('en.resx');
+
+    const resources = families.find((f) => f.displayName.includes('Properties/Resources'));
+    expect(resources?.files['']).toContain('Resources.resx');
+    expect(resources?.files.pt).toMatch(/[/\\]pt[/\\]Resources\.resx$/);
   });
 });
 

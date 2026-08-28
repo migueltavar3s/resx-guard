@@ -4,8 +4,10 @@ import {
   extractEndingSuffix,
   extractPlaceholders,
   getBaseName,
+  normalizePathKey,
   parseLocaleFromFileName,
   placeholdersMatch,
+  resolveResxIdentity,
   toPascalCaseKey,
 } from '../src/services/naming';
 
@@ -55,5 +57,41 @@ describe('locale from file name', () => {
     expect(parseLocaleFromFileName('Resources.en-US.resx')).toBe('en-US');
     expect(getBaseName('Resources.pt.resx')).toBe('Resources');
     expect(getBaseName('Resources.resx')).toBe('Resources');
+  });
+
+  it('canonicalizes case, underscores, and dotted resource names', () => {
+    expect(parseLocaleFromFileName('Resources.PT.resx')).toBe('pt');
+    expect(parseLocaleFromFileName('Resources.pt_PT.resx')).toBe('pt-PT');
+    expect(parseLocaleFromFileName('Default.aspx.pt.resx')).toBe('pt');
+    expect(getBaseName('Default.aspx.pt.resx')).toBe('Default.aspx');
+    expect(parseLocaleFromFileName('pt.resx')).toBe('pt');
+  });
+
+  it('does not treat project/module suffixes as cultures', () => {
+    expect(parseLocaleFromFileName('App.Web.resx')).toBe('');
+    expect(getBaseName('App.Web.resx')).toBe('App.Web');
+    expect(parseLocaleFromFileName('MyApp.UI.resx')).toBe('');
+    expect(parseLocaleFromFileName('Form.cs.resx')).toBe('');
+  });
+
+  it('groups folder-based cultures only when the invariant sibling exists', () => {
+    const files = new Set([
+      normalizePathKey('C:/ws/Properties/Resources.resx'),
+      normalizePathKey('C:/ws/Properties/pt/Resources.resx'),
+    ]);
+    expect(resolveResxIdentity('C:/ws/Properties/pt/Resources.resx', files)).toMatchObject({
+      locale: 'pt',
+      baseName: 'Resources',
+      familyDir: 'C:/ws/Properties',
+    });
+    expect(resolveResxIdentity('C:/ws/src/cs/Resources.resx', files)).toMatchObject({
+      locale: '',
+      baseName: 'Resources',
+    });
+    const czech = new Set([
+      normalizePathKey('C:/ws/Properties/Resources.resx'),
+      normalizePathKey('C:/ws/Properties/Resources.cs.resx'),
+    ]);
+    expect(resolveResxIdentity('C:/ws/Properties/Resources.cs.resx', czech).locale).toBe('cs');
   });
 });

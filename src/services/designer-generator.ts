@@ -131,13 +131,12 @@ export async function resolveDesignerMeta(
 }> {
   const dir = path.dirname(neutralResxPath);
   const base = path.basename(neutralResxPath, '.resx');
+  const className = sanitizeIdentifier(base);
   const designerPath = path.join(dir, `${base}.Designer.cs`);
 
   let isPublic = false;
-  let namespace = guessNamespace(dir);
-  let className = sanitizeIdentifier(base);
+  let rootNamespace = guessNamespace(dir);
 
-  // Look for nearby .csproj
   const csproj = await findCsproj(dir);
   if (csproj) {
     try {
@@ -145,32 +144,19 @@ export async function resolveDesignerMeta(
       if (/PublicResXFileCodeGenerator/i.test(xml)) {
         isPublic = true;
       }
-      const nsMatch = xml.match(/<RootNamespace>([^<]+)<\/RootNamespace>/i);
-      if (nsMatch) {
-        namespace = nsMatch[1].trim();
-      } else {
-        const nameMatch = xml.match(/<AssemblyName>([^<]+)<\/AssemblyName>/i);
-        if (nameMatch) {
-          namespace = nameMatch[1].trim();
-        } else {
-          namespace = path.basename(csproj, '.csproj');
-        }
-      }
-
-      // Embedded resource name is typically RootNamespace.Folder.File
+      rootNamespace = parseRootNamespace(xml, csproj);
       const projectDir = path.dirname(csproj);
-      const rel = path.relative(projectDir, dir);
-      const parts = [namespace];
-      if (rel && rel !== '.') {
-        parts.push(...rel.split(/[/\\]/).filter(Boolean));
-      }
-      parts.push(base);
+      const relDir = path.relative(projectDir, dir);
+      const relFile = path.relative(projectDir, neutralResxPath);
+      const custom = parseCustomToolNamespace(xml, relFile);
+      const typeNamespace = custom || designerTypeNamespace(rootNamespace, relDir);
+      const resourceBaseName = resourceManagerName(typeNamespace, base);
       return {
         designerPath,
         className,
-        namespace: namespaceIncludesFolder(namespace, rel) ? namespace : namespace,
+        namespace: typeNamespace,
         isPublic,
-        resourceBaseName: parts.join('.'),
+        resourceBaseName,
       };
     } catch {
       // fall through
@@ -180,14 +166,59 @@ export async function resolveDesignerMeta(
   return {
     designerPath,
     className,
-    namespace,
+    namespace: rootNamespace,
     isPublic,
-    resourceBaseName: `${namespace}.${base}`,
+    resourceBaseName: resourceManagerName(rootNamespace, base),
   };
 }
 
-function namespaceIncludesFolder(_ns: string, _rel: string): boolean {
-  return false;
+/** C# namespace for a .resx: RootNamespace + relative folders (Visual Studio / SDK default). */
+export function designerTypeNamespace(rootNamespace: string, relativeDir: string): string {
+  if (!relativeDir || relativeDir === '.') {
+    return rootNamespace;
+  }
+  const segs = relativeDir
+    .split(/[/\\]/)
+    .filter((s) => s && s !== '.')
+    .map((s) => sanitizeIdentifier(s));
+  if (segs.length === 0) {
+    return rootNamespace;
+  }
+  const suffix = segs.join('.');
+  const root = rootNamespace.toLowerCase();
+  const suf = suffix.toLowerCase();
+  if (root === suf || root.endsWith(`.${suf}`)) {
+    return rootNamespace;
+  }
+  return `${rootNamespace}.${suffix}`;
+}
+
+function resourceManagerName(typeNamespace: string, className: string): string {
+  return `${typeNamespace}.${className}`;
+}
+
+function parseRootNamespace(csprojXml: string, csprojPath: string): string {
+  const nsMatch = csprojXml.match(/<RootNamespace>\s*([^<]+?)\s*<\/RootNamespace>/i);
+  if (nsMatch) {
+    return nsMatch[1].trim();
+  }
+  const nameMatch = csprojXml.match(/<AssemblyName>\s*([^<]+?)\s*<\/AssemblyName>/i);
+  if (nameMatch) {
+    return nameMatch[1].trim();
+  }
+  return path.basename(csprojPath, '.csproj');
+}
+
+function parseCustomToolNamespace(csprojXml: string, resxRelFromProject: string): string | undefined {
+  const normalized = resxRelFromProject.replace(/\\/g, '/');
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '[\\\\/]');
+  const re = new RegExp(
+    `<EmbeddedResource[^>]*Update="${escaped}"[^>]*>([\\s\\S]*?)</EmbeddedResource>`,
+    'i'
+  );
+  const block = csprojXml.match(re);
+  const custom = block?.[1]?.match(/<CustomToolNamespace>\s*([^<]+?)\s*<\/CustomToolNamespace>/i);
+  return custom?.[1]?.trim();
 }
 
 function guessNamespace(dir: string): string {
