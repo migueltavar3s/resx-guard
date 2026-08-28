@@ -19,6 +19,7 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 - Validation rules (PascalCase keys, matching string endings, placeholders, missing translations)
 - Warnings in the grid, Summary, and VS Code Problems panel
 - Auto-update `*.Designer.cs` when keys change
+- Import/export Excel (`.xlsx` / `.xls`) for the selected families
 - Extension UI in **English** and **Portuguese**
 
 ## Usage
@@ -38,6 +39,8 @@ If ResX Guard saves you time, consider [sponsoring on GitHub](https://github.com
 Issues: [github.com/migueltavar3s/resx-guard/issues](https://github.com/migueltavar3s/resx-guard/issues)
 
 ## Development
+
+Work on **`dev`**. Merge to **`main`** when you want CI to run critical tests and publish to the Marketplace.
 
 ```bash
 npm install
