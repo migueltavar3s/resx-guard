@@ -1106,6 +1106,18 @@ select {
   opacity: 0.7;
 }
 
+.about-version {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -92,6 +92,7 @@ export interface IndexSnapshot {
   visibleLocales: string[];
   settings: ExtensionSettings;
   language: string;
+  version: string;
 }
 
 /** Messages: extension host ↔ webview */
@@ -113,4 +114,5 @@ export type WebviewToHostMessage =
   | { type: 'refresh' }
   | { type: 'openInEditor'; familyId: string; key: string; locale?: string }
   | { type: 'exportExcel' }
-  | { type: 'importExcel' };
+  | { type: 'importExcel' }
+  | { type: 'openUrl'; url: string };

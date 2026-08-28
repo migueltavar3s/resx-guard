@@ -59,7 +59,7 @@ export function validateFamily(
   const locales =
     localesToCheck && localesToCheck.length > 0
       ? localesToCheck
-      : [...byLocale.keys()];
+      : [...new Set([...byLocale.keys(), ...Object.keys(family.files)])];
 
   for (const key of keys) {
     const neutralEntry = neutral.entries.find((e) => e.key === key);

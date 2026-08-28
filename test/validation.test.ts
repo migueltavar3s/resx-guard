@@ -109,3 +109,59 @@ describe('workspace scanner', () => {
     expect(resources?.files.pt).toBeTruthy();
   });
 });
+
+describe('missing translations for new locale files', () => {
+  it('flags every key when a satellite file exists but is empty', () => {
+    const fam = family();
+    fam.files.fr = '/p/Resources.fr.resx';
+    const files: ResxFile[] = [
+      {
+        path: '/p/Resources.resx',
+        locale: '',
+        duplicateKeys: [],
+        entries: [
+          { key: 'Hello', value: 'Hello', comment: '' },
+          { key: 'Bye', value: 'Bye', comment: '' },
+        ],
+      },
+      {
+        path: '/p/Resources.pt.resx',
+        locale: 'pt',
+        duplicateKeys: [],
+        entries: [
+          { key: 'Hello', value: 'Olá', comment: '' },
+          { key: 'Bye', value: 'Adeus', comment: '' },
+        ],
+      },
+      {
+        path: '/p/Resources.fr.resx',
+        locale: 'fr',
+        duplicateKeys: [],
+        entries: [],
+      },
+    ];
+    const issues = validateFamily(fam, files, rules).filter((i) => i.rule === 'missingTranslation');
+    expect(issues).toHaveLength(2);
+    expect(issues.every((i) => i.locale === 'fr')).toBe(true);
+  });
+
+  it('stops flagging a locale after its file is removed from the family', () => {
+    const fam = family();
+    const files: ResxFile[] = [
+      {
+        path: '/p/Resources.resx',
+        locale: '',
+        duplicateKeys: [],
+        entries: [{ key: 'Hello', value: 'Hello', comment: '' }],
+      },
+    ];
+    const issues = validateFamily(fam, files, rules).filter((i) => i.rule === 'missingTranslation');
+    expect(issues.some((i) => i.locale === 'pt')).toBe(true);
+
+    const withoutPt = { ...fam, files: { '': fam.files[''] } };
+    const afterDelete = validateFamily(withoutPt, files, rules).filter(
+      (i) => i.rule === 'missingTranslation'
+    );
+    expect(afterDelete.some((i) => i.locale === 'pt')).toBe(false);
+  });
+});

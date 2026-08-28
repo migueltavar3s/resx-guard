@@ -111,6 +111,9 @@ export class ResxGuardPanel {
         case 'importExcel':
           await this.importExcel();
           break;
+        case 'openUrl':
+          await this.openUrl(msg.url);
+          break;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -169,6 +172,19 @@ export class ResxGuardPanel {
         ? `Importação concluída: ${result.created} novas, ${result.updated} atualizadas, ${result.skipped} ignoradas.`
         : `Import finished: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped.`
     );
+  }
+
+  private async openUrl(raw: string): Promise<void> {
+    let parsed: vscode.Uri;
+    try {
+      parsed = vscode.Uri.parse(raw, true);
+    } catch {
+      return;
+    }
+    if (parsed.scheme !== 'https' || parsed.authority.toLowerCase() !== 'github.com') {
+      return;
+    }
+    await vscode.env.openExternal(parsed);
   }
 
   private getHtml(webview: vscode.Webview): string {

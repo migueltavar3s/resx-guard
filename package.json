@@ -4,6 +4,18 @@
   "description": "Fast, minimalist ResX translation manager for C# projects in VS Code",
   "version": "0.1.0",
   "publisher": "resx-guard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/migueltavar3s/resx-guard.git"
+  },
+  "homepage": "https://github.com/migueltavar3s/resx-guard",
+  "bugs": {
+    "url": "https://github.com/migueltavar3s/resx-guard/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/migueltavar3s"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

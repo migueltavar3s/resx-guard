@@ -13,11 +13,9 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Ok" xml:space="preserve">
-    <value>OK</value>
+    <value>Ok</value>
   </data>
-  <data name="Cancelar" xml:space="preserve">
-    <value>Cancel</value>
-  </data>
+  
   <data name="Retry" xml:space="preserve">
     <value>Retry</value>
   </data>

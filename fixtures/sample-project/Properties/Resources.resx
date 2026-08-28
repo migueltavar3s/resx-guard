@@ -12,17 +12,20 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="SaveFailed" xml:space="preserve">
-    <value>Save failed.</value>
-    <comment>Shown when persist fails</comment>
-  </data>
-  <data name="InvalidResourceFile" xml:space="preserve">
-    <value>Invalid resource file:</value>
-  </data>
-  <data name="DuplicateKeysInError" xml:space="preserve">
-    <value>Duplicate keys in '{0}': {1}</value>
-  </data>
+  
+  
+  
   <data name="WelcomeMessage" xml:space="preserve">
     <value>Welcome to ResX Guard</value>
   </data>
-</root>
+  <data name="ProjectHasNoResourceFile" xml:space="preserve">
+    <value>Project has no resource file</value>
+  </data>
+  <data name="ImportFailedEror" xml:space="preserve">
+    <value>Import failed: {0}</value>
+  </data>
+  
+  
+
+  
+  <data name="Confirms" xml:space="preserve"><value>Confirms</value></data></root>

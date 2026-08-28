@@ -42,14 +42,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const watcher = vscode.workspace.createFileSystemWatcher('**/*.resx');
   context.subscriptions.push(watcher);
 
+  let rescanTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleRescan = () => {
+    if (rescanTimer) {
+      clearTimeout(rescanTimer);
+    }
+    rescanTimer = setTimeout(() => {
+      void index?.refresh();
+    }, 180);
+  };
+  context.subscriptions.push({
+    dispose: () => {
+      if (rescanTimer) {
+        clearTimeout(rescanTimer);
+      }
+    },
+  });
+
   watcher.onDidChange((uri) => {
     void index?.refreshFile(uri.fsPath);
   });
-  watcher.onDidCreate((uri) => {
-    void index?.refreshFile(uri.fsPath);
+  watcher.onDidCreate(() => {
+    scheduleRescan();
   });
-  watcher.onDidDelete((uri) => {
-    void index?.removeFile(uri.fsPath);
+  watcher.onDidDelete(() => {
+    scheduleRescan();
   });
 
   context.subscriptions.push(

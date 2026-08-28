@@ -12,16 +12,20 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="SaveFailed" xml:space="preserve">
-    <value>Falha ao guardar</value>
-  </data>
-  <data name="InvalidResourceFile" xml:space="preserve">
-    <value>Ficheiro de recursos inválido:</value>
-  </data>
-  <data name="DuplicateKeysInError" xml:space="preserve">
-    <value>Keys duplicadas em '{0}': {1}</value>
-  </data>
+  
+  
+  
   <data name="WelcomeMessage" xml:space="preserve">
     <value>Bem-vindo ao ResX Guard</value>
   </data>
-</root>
+  <data name="ProjectHasNoResourceFile" xml:space="preserve">
+    <value>O projeto não tem ficheiro de recursos.</value>
+  </data>
+  <data name="ImportFailedEror" xml:space="preserve">
+    <value>Falha na importação: {0}</value>
+  </data>
+  
+
+  
+  
+  <data name="Confirms" xml:space="preserve"><value>Confirm</value></data></root>

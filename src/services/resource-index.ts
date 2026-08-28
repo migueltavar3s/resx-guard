@@ -36,6 +36,7 @@ import {
   type ExcelWorkbookPayload,
 } from './excel-io';
 import { toPascalCaseKey } from './naming';
+import { mergeVisibleLocales } from './locale-columns';
 
 export class ResourceIndex {
   private families: ResxFamily[] = [];
@@ -61,13 +62,7 @@ export class ResourceIndex {
   }
 
   async refresh(): Promise<void> {
-    await this.fullScan();
-    // Keep selection of existing families; select all if empty
-    const existing = new Set(this.families.map((f) => f.id));
-    this.selectedFamilyIds = new Set([...this.selectedFamilyIds].filter((id) => existing.has(id)));
-    if (this.selectedFamilyIds.size === 0) {
-      this.families.forEach((f) => this.selectedFamilyIds.add(f.id));
-    }
+    await this.rescanWorkspace();
     this.rebuildRowsAndValidate();
     this.onDidChangeEmitter.fire();
   }
@@ -132,16 +127,34 @@ export class ResourceIndex {
     );
 
     this.collectLocales();
-    if (this.visibleLocales.length === 0) {
-      this.visibleLocales = [...this.locales];
-    } else {
-      // Keep selection but include new locales as unchecked by filtering display only
-      const known = new Set(this.locales);
-      this.visibleLocales = this.visibleLocales.filter((l) => known.has(l));
-      if (this.visibleLocales.length === 0) {
-        this.visibleLocales = [...this.locales];
+    this.syncVisibleLocales();
+  }
+
+  private async rescanWorkspace(): Promise<void> {
+    const previous = new Set(this.families.map((f) => f.id));
+    await this.fullScan();
+    this.reconcileSelection(previous);
+  }
+
+  private reconcileSelection(previousIds: Set<string>): void {
+    const existing = new Set(this.families.map((f) => f.id));
+    this.selectedFamilyIds = new Set(
+      [...this.selectedFamilyIds].filter((id) => existing.has(id))
+    );
+    for (const family of this.families) {
+      if (!previousIds.has(family.id)) {
+        this.selectedFamilyIds.add(family.id);
       }
     }
+    if (this.selectedFamilyIds.size === 0) {
+      this.families.forEach((f) => this.selectedFamilyIds.add(f.id));
+    }
+    void this.context.workspaceState.update('selectedFamilyIds', [...this.selectedFamilyIds]);
+  }
+
+  private syncVisibleLocales(): void {
+    this.visibleLocales = mergeVisibleLocales(this.visibleLocales, this.locales);
+    void this.context.workspaceState.update('visibleLocales', this.visibleLocales);
   }
 
   async refreshFile(filePath: string): Promise<void> {
@@ -154,13 +167,19 @@ export class ResourceIndex {
       this.fileCache.set(normalized, parsed);
     } catch {
       this.fileCache.delete(normalized);
+      await this.rescanWorkspace();
+      this.rebuildRowsAndValidate();
+      this.onDidChangeEmitter.fire();
+      return;
     }
-    // If new file, rescan families
-    const known = [...this.fileCache.keys()];
-    if (!known.includes(normalized) || !this.families.some((f) => Object.values(f.files).some((p) => path.normalize(p) === normalized))) {
-      await this.fullScan();
+    const inFamily = this.families.some((f) =>
+      Object.values(f.files).some((p) => path.normalize(p) === normalized)
+    );
+    if (!inFamily) {
+      await this.rescanWorkspace();
     } else {
       this.collectLocales();
+      this.syncVisibleLocales();
     }
     this.rebuildRowsAndValidate();
     this.onDidChangeEmitter.fire();
@@ -168,7 +187,7 @@ export class ResourceIndex {
 
   async removeFile(filePath: string): Promise<void> {
     this.fileCache.delete(path.normalize(filePath));
-    await this.fullScan();
+    await this.rescanWorkspace();
     this.rebuildRowsAndValidate();
     this.onDidChangeEmitter.fire();
   }
@@ -187,6 +206,7 @@ export class ResourceIndex {
       visibleLocales: this.visibleLocales,
       settings: this.settings,
       language,
+      version: String(this.context.extension?.packageJSON?.version ?? '0.1.0'),
     };
   }
 
@@ -255,6 +275,7 @@ export class ResourceIndex {
       this.fileCache.set(path.normalize(filePath), parsed);
       if (!this.locales.includes(locale)) {
         this.collectLocales();
+        this.syncVisibleLocales();
       }
     } finally {
       // Small delay before accepting external watcher events
@@ -602,11 +623,16 @@ export class ResourceIndex {
 
     for (const family of this.families) {
       const files: ResxFile[] = [];
-      for (const p of Object.values(family.files)) {
-        const cached = this.fileCache.get(path.normalize(p));
-        if (cached) {
-          files.push(cached);
-        }
+      for (const [locale, filePath] of Object.entries(family.files)) {
+        const cached = this.fileCache.get(path.normalize(filePath));
+        files.push(
+          cached ?? {
+            path: filePath,
+            locale,
+            entries: [],
+            duplicateKeys: [],
+          }
+        );
       }
       const rows = buildRows(family, files);
       const issues = validateFamily(family, files, this.settings.rules);

@@ -10,6 +10,7 @@ import { onHostMessage, post } from './vscodeApi';
 import { FileTree } from './components/FileTree';
 import { ResourceGrid, type ColumnFilters, type IssueFilter } from './components/ResourceGrid';
 import { SettingsPage } from './components/SettingsPage';
+import { AboutPage } from './components/AboutPage';
 import { AddEntryModal } from './components/AddEntryModal';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ColumnPicker } from './components/ColumnPicker';
@@ -18,7 +19,7 @@ import { SummaryPanel } from './components/SummaryPanel';
 import { ResizeHandle } from './components/ResizeHandle';
 import { usePersistedLayout, PANEL_LIMITS, clampPanelWidth } from './hooks/usePersistedLayout';
 
-type Tab = 'main' | 'settings';
+type Tab = 'main' | 'settings' | 'about';
 
 function normalize(text: string): string {
   return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -226,7 +227,7 @@ export function App() {
   return (
     <div className="app">
       <nav className="tabs">
-        {(['main', 'settings'] as Tab[]).map((id) => (
+        {(['main', 'settings', 'about'] as Tab[]).map((id) => (
           <button
             key={id}
             type="button"
@@ -388,6 +389,12 @@ export function App() {
       {tab === 'settings' && (
         <div className="page">
           <SettingsPage settings={snapshot.settings} onChange={updateSettings} />
+        </div>
+      )}
+
+      {tab === 'about' && (
+        <div className="page">
+          <AboutPage version={snapshot.version} />
         </div>
       )}
 

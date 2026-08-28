@@ -21,14 +21,14 @@ namespace SampleProject {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("ResX.Guard", "0.1.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Messages {
+    internal class Resources {
 
         private static global::System.Resources.ResourceManager resourceMan;
 
         private static global::System.Globalization.CultureInfo resourceCulture;
 
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Messages() {
+        internal Resources() {
         }
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace SampleProject {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SampleProject.Resources.Messages", typeof(Messages).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SampleProject.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -60,28 +60,58 @@ namespace SampleProject {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Ok.
+        ///   Looks up a localized string similar to Welcome to ResX Guard.
         /// </summary>
         /// <remarks>
-        ///   Neutral: Ok
-        ///   pt: OK
+        ///   Neutral: Welcome to ResX Guard
+        ///   en: (missing)
+        ///   pt: Bem-vindo ao ResX Guard
         /// </remarks>
-        internal static string Ok {
+        internal static string WelcomeMessage {
             get {
-                return ResourceManager.GetString("Ok", resourceCulture);
+                return ResourceManager.GetString("WelcomeMessage", resourceCulture);
             }
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Retry.
+        ///   Looks up a localized string similar to Project has no resource file.
         /// </summary>
         /// <remarks>
-        ///   Neutral: Retry
-        ///   pt: Tentar novamente
+        ///   Neutral: Project has no resource file
+        ///   en: (missing)
+        ///   pt: O projeto não tem ficheiro de recursos.
         /// </remarks>
-        internal static string Retry {
+        internal static string ProjectHasNoResourceFile {
             get {
-                return ResourceManager.GetString("Retry", resourceCulture);
+                return ResourceManager.GetString("ProjectHasNoResourceFile", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Import failed: {0}.
+        /// </summary>
+        /// <remarks>
+        ///   Neutral: Import failed: {0}
+        ///   en: (missing)
+        ///   pt: Falha na importação: {0}
+        /// </remarks>
+        internal static string ImportFailedEror {
+            get {
+                return ResourceManager.GetString("ImportFailedEror", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Confirms.
+        /// </summary>
+        /// <remarks>
+        ///   Neutral: Confirms
+        ///   en: (missing)
+        ///   pt: Confirm
+        /// </remarks>
+        internal static string Confirms {
+            get {
+                return ResourceManager.GetString("Confirms", resourceCulture);
             }
         }
     }
