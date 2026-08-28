@@ -200,7 +200,7 @@ export class ResourceIndex {
       visibleLocales: this.visibleLocales,
       settings: this.settings,
       language,
-      version: String(this.context.extension?.packageJSON?.version ?? '0.1.0'),
+      version: String(this.context.extension?.packageJSON?.version ?? '0.1.1'),
     };
   }
 
