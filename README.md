@@ -2,7 +2,13 @@
 
 Fast, minimalist ResX translation manager for C# projects in Visual Studio Code.
 
-Inspired by Visual Studio ResX Resource Manager — modern VS Code UI, instant search, configurable validation rules, and automatic `Resources.Designer.cs` updates.
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/migueltavar3s.resx-guard?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/migueltavar3s.resx-guard)](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, instant search, configurable validation, and automatic `Resources.Designer.cs` updates.
+
+**Install:** [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard) · ID `migueltavar3s.resx-guard`
 
 ## Features
 
@@ -21,6 +27,16 @@ Inspired by Visual Studio ResX Resource Manager — modern VS Code UI, instant s
 2. Run **ResX Guard: Open** from the command palette, or use the Activity Bar icon
 3. Select resource families on the left, edit translations in the grid
 
+## Settings
+
+See **ResX Guard** in VS Code Settings for key naming, Designer.cs generation, and validation rules.
+
+## Support
+
+If ResX Guard saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/migueltavar3s).
+
+Issues: [github.com/migueltavar3s/resx-guard/issues](https://github.com/migueltavar3s/resx-guard/issues)
+
 ## Development
 
 ```bash
@@ -31,13 +47,11 @@ npm test
 
 ### Test the UI (one step)
 
-1. Open this repo in VS Code / Cursor  
-2. Press **F5** (or Run and Debug → **Run Extension (sample project)**)  
-3. A new Extension Development Host window opens with `fixtures/sample-project`  
-4. The ResX Guard panel should open automatically with Neutral + `pt` columns  
+1. Open this repo in VS Code / Cursor
+2. Press **F5** (or Run and Debug → **Run Extension (sample project)**)
+3. A new Extension Development Host window opens with `fixtures/sample-project`
+4. The ResX Guard panel should open automatically with Neutral + `pt` columns
 
 In the left tree, check/uncheck `Resources` / `Messages` to filter. Click a row to see **Summary** with all languages.
 
-## Settings
-
-See **ResX Guard** in VS Code Settings for key naming, Designer.cs generation, and validation rules.
+Package a VSIX with `npm run package`.

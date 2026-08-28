@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as fsPromises from 'fs/promises';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../models/types';
 import type { ResourceIndex } from '../services/resource-index';
-import { workbookBuffer } from '../services/excel-io';
 
 export class ResxGuardPanel {
   public static current: ResxGuardPanel | undefined;
@@ -105,12 +103,6 @@ export class ResxGuardPanel {
         case 'openInEditor':
           await this.index.openInEditor(msg.familyId, msg.key, msg.locale);
           break;
-        case 'exportExcel':
-          await this.exportExcel();
-          break;
-        case 'importExcel':
-          await this.importExcel();
-          break;
         case 'openUrl':
           await this.openUrl(msg.url);
           break;
@@ -121,57 +113,6 @@ export class ResxGuardPanel {
       void this.panel.webview.postMessage(errorMsg);
       void vscode.window.showErrorMessage(`ResX Guard: ${message}`);
     }
-  }
-
-  private async exportExcel(): Promise<void> {
-    const pt = vscode.env.language.startsWith('pt');
-    const uri = await vscode.window.showSaveDialog({
-      defaultUri: vscode.Uri.file('translations.xlsx'),
-      filters: {
-        Excel: ['xlsx', 'xls'],
-      },
-      saveLabel: pt ? 'Exportar' : 'Export',
-    });
-    if (!uri) {
-      return;
-    }
-    const bookType = uri.fsPath.toLowerCase().endsWith('.xls') ? 'xls' : 'xlsx';
-    const payload = this.index.getExcelPayload();
-    if (payload.rows.length === 0) {
-      void vscode.window.showWarningMessage(
-        pt ? 'Não há traduções selecionadas para exportar.' : 'No translations selected to export.'
-      );
-      return;
-    }
-    const buffer = workbookBuffer(payload, bookType);
-    await fsPromises.writeFile(uri.fsPath, buffer);
-    void vscode.window.showInformationMessage(
-      pt
-        ? `Exportadas ${payload.rows.length} keys para Excel.`
-        : `Exported ${payload.rows.length} keys to Excel.`
-    );
-  }
-
-  private async importExcel(): Promise<void> {
-    const pt = vscode.env.language.startsWith('pt');
-    const picked = await vscode.window.showOpenDialog({
-      canSelectMany: false,
-      filters: {
-        Excel: ['xlsx', 'xls'],
-      },
-      openLabel: pt ? 'Importar' : 'Import',
-    });
-    const uri = picked?.[0];
-    if (!uri) {
-      return;
-    }
-    const buffer = await fsPromises.readFile(uri.fsPath);
-    const result = await this.index.importExcelBuffer(buffer);
-    void vscode.window.showInformationMessage(
-      pt
-        ? `Importação concluída: ${result.created} novas, ${result.updated} atualizadas, ${result.skipped} ignoradas.`
-        : `Import finished: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped.`
-    );
   }
 
   private async openUrl(raw: string): Promise<void> {

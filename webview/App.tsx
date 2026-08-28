@@ -14,7 +14,6 @@ import { AboutPage } from './components/AboutPage';
 import { AddEntryModal } from './components/AddEntryModal';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ColumnPicker } from './components/ColumnPicker';
-import { ExcelMenu } from './components/ExcelMenu';
 import { SummaryPanel } from './components/SummaryPanel';
 import { ResizeHandle } from './components/ResizeHandle';
 import { usePersistedLayout, PANEL_LIMITS, clampPanelWidth } from './hooks/usePersistedLayout';
@@ -282,11 +281,6 @@ export function App() {
                 </span>
                 {t('toolbar.delete')}
               </button>
-              <ExcelMenu
-                exportDisabled={snapshot.selectedFamilyIds.length === 0}
-                onExport={() => post({ type: 'exportExcel' })}
-                onImport={() => post({ type: 'importExcel' })}
-              />
               <div className="toolbar-spacer" />
               <div className="toolbar-picker-wrap">
                 <button

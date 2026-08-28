@@ -113,6 +113,4 @@ export type WebviewToHostMessage =
   | { type: 'updateSettings'; settings: Partial<ExtensionSettings> }
   | { type: 'refresh' }
   | { type: 'openInEditor'; familyId: string; key: string; locale?: string }
-  | { type: 'exportExcel' }
-  | { type: 'importExcel' }
   | { type: 'openUrl'; url: string };
