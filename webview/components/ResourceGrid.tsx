@@ -12,7 +12,7 @@ import { t } from '../i18n';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterSelect } from './FilterSelect';
 import { IssueChip } from './IssueChip';
-import { uniqueRules } from '../utils/issueMeta';
+import { issuesForCell, primaryRule, ruleClass, uniqueRules } from '../utils/issueMeta';
 import { autosizeTextarea, estimateRowHeight } from '../utils/rowSize';
 import { usePersistedSet } from '../hooks/usePersistedSet';
 
@@ -466,7 +466,7 @@ function GridDataRow({
         if (col.kind === 'key') {
           return (
             <div key={col.id} className="grid-cell key">
-            <EditableText
+              <EditableText
                 value={row.key}
                 columnWidth={col.width}
                 onActivate={() => onSelect(row)}
@@ -487,7 +487,10 @@ function GridDataRow({
           );
         }
         return (
-          <div key={col.id} className="grid-cell">
+          <div
+            key={col.id}
+            className={`grid-cell${issueCellClass(row, col.locale)}`}
+          >
             <EditableText
               value={row.values[col.locale] ?? ''}
               columnWidth={col.width}
@@ -503,6 +506,11 @@ function GridDataRow({
       })}
     </div>
   );
+}
+
+function issueCellClass(row: ResourceRow, locale?: string): string {
+  const rule = primaryRule(issuesForCell(row.issues, locale));
+  return rule ? ` has-issue ${ruleClass(rule)}` : '';
 }
 
 function IssueIndicators({ row }: { row: ResourceRow }) {

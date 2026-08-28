@@ -12,6 +12,7 @@
   "toolbar.deleteHint": "Delete key removes the selected row",
   "toolbar.export": "Export",
   "toolbar.import": "Import",
+  "toolbar.excel.more": "More Excel actions",
   "toolbar.columns": "Columns",
   "columns.title": "Visible columns",
   "columns.languages": "Languages",

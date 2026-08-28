@@ -13,6 +13,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { AddEntryModal } from './components/AddEntryModal';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ColumnPicker } from './components/ColumnPicker';
+import { ExcelMenu } from './components/ExcelMenu';
 import { SummaryPanel } from './components/SummaryPanel';
 import { ResizeHandle } from './components/ResizeHandle';
 import { usePersistedLayout, PANEL_LIMITS, clampPanelWidth } from './hooks/usePersistedLayout';
@@ -260,7 +261,7 @@ export function App() {
             <div className="toolbar">
               <button
                 type="button"
-                className="btn primary"
+                className="btn"
                 disabled={snapshot.selectedFamilyIds.length === 0}
                 onClick={() => setShowAdd(true)}
               >
@@ -271,7 +272,7 @@ export function App() {
               </button>
               <button
                 type="button"
-                className="btn danger-ghost"
+                className="btn"
                 disabled={!selected}
                 onClick={requestDelete}
               >
@@ -280,27 +281,11 @@ export function App() {
                 </span>
                 {t('toolbar.delete')}
               </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={snapshot.selectedFamilyIds.length === 0}
-                onClick={() => post({ type: 'exportExcel' })}
-              >
-                <span className="btn-icon" aria-hidden>
-                  ⇧
-                </span>
-                {t('toolbar.export')}
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => post({ type: 'importExcel' })}
-              >
-                <span className="btn-icon" aria-hidden>
-                  ⇩
-                </span>
-                {t('toolbar.import')}
-              </button>
+              <ExcelMenu
+                exportDisabled={snapshot.selectedFamilyIds.length === 0}
+                onExport={() => post({ type: 'exportExcel' })}
+                onImport={() => post({ type: 'importExcel' })}
+              />
               <div className="toolbar-spacer" />
               <div className="toolbar-picker-wrap">
                 <button
@@ -382,26 +367,14 @@ export function App() {
                   >
                     <div className="summary-panel-header">
                       <span>{t('summary.title')}</span>
-                      <div className="summary-panel-actions">
-                        {selected && (
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={requestDelete}
-                            title={t('toolbar.delete')}
-                          >
-                            ⌫
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          onClick={() => patchLayout({ summaryOpen: false })}
-                          title={t('summary.hide')}
-                        >
-                          ×
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => patchLayout({ summaryOpen: false })}
+                        title={t('summary.hide')}
+                      >
+                        ×
+                      </button>
                     </div>
                     <SummaryPanel row={selected} locales={allLocales} />
                   </aside>
