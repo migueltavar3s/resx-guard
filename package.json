@@ -163,6 +163,7 @@
   },
   "devDependencies": {
     "@tanstack/react-virtual": "^3.1.2",
+    "@testing-library/react": "^14.2.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
@@ -171,6 +172,8 @@
     "@vscode/vsce": "^2.22.0",
     "@xmldom/xmldom": "^0.9.5",
     "esbuild": "^0.20.0",
+    "jsdom": "^24.0.0",
+    "playwright-core": "^1.46.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "^5.3.3",

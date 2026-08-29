@@ -49,11 +49,13 @@ describe('summary overflow CSS', () => {
     const block = selectorBlock('.summary-key');
 
     expect(block).toMatch(/\boverflow-wrap\s*:\s*anywhere\s*;/);
+    expect(block).toMatch(/\bword-break\s*:\s*break-all\s*;/);
     expect(block).toMatch(/\bmax-height\s*:\s*[^;]+\s*;/);
   });
 
   it('wraps issue messages and editable cell text', () => {
-    expect(selectorBlock('.issue-item-message')).toMatch(/\boverflow-wrap\s*:\s*anywhere\s*;/);
-    expect(selectorBlock('.cell-textarea')).toMatch(/\boverflow-wrap\s*:\s*anywhere\s*;/);
+    expect(selectorBlock('.issue-item-message')).toMatch(/\bword-break\s*:\s*break-all\s*;/);
+    expect(selectorBlock('.issue-item-message')).toMatch(/\bdisplay\s*:\s*block\s*;/);
+    expect(selectorBlock('.cell-textarea')).toMatch(/\bword-break\s*:\s*break-all\s*;/);
   });
 });

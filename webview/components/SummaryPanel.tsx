@@ -60,8 +60,8 @@ export function SummaryPanel({ row, locales }: Props) {
                     key={`${issue.rule}-${issue.locale ?? ''}-${i}`}
                     className={`issue-item ${ruleClass(issue.rule)}`}
                   >
-                    <span className="issue-item-tag">{ruleLabel(issue.rule)}</span>
-                    <span className="issue-item-message">{issue.message}</span>
+                    <div className="issue-item-tag">{ruleLabel(issue.rule)}</div>
+                    <div className="issue-item-message">{issue.message}</div>
                   </li>
                 ))}
               </ul>

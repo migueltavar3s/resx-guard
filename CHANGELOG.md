@@ -5,6 +5,7 @@
 - Restore Excel import/export (toolbar remembers last action)
 - Excel round-trip: Portuguese/English headers, skip empty columns, match families by name without picking the wrong one, create missing locale files, map `PT` → `pt`
 - Summary (and grid/delete dialog) wrap oversized keys so they no longer blow the layout
+- Issue cards in Summary wrap giant PascalCase tokens instead of overflowing the pane
 - GitHub Actions: tests on `dev`, tests + Marketplace publish on `main`
 
 ## 0.1.1

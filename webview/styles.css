@@ -707,7 +707,7 @@ select {
   resize: none;
   overflow: hidden;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: break-all;
   outline: none;
   border-radius: 3px;
   cursor: text;
@@ -795,6 +795,9 @@ select {
   position: fixed;
   z-index: 90;
   width: 280px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  overflow: hidden;
   padding: 8px 10px;
   border-radius: 6px;
   background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background, var(--vscode-editor-background)));
@@ -836,6 +839,10 @@ select {
 .issue-tooltip-msg {
   font-size: 11px;
   line-height: 1.4;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .issue-tooltip.issue-rule--duplicateKeys {
@@ -885,8 +892,10 @@ select {
 .summary-key {
   font-weight: 600;
   font-size: 13px;
+  display: block;
+  min-width: 0;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: break-all;
   max-width: 100%;
   max-height: 6.5em;
   overflow: auto;
@@ -925,9 +934,11 @@ select {
 
 .summary-locale-card .value,
 .summary-locale .value {
+  display: block;
+  min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: break-all;
   max-width: 100%;
   font-size: 11px;
   line-height: 1.4;
@@ -949,6 +960,8 @@ select {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .issue-item {
@@ -961,6 +974,9 @@ select {
   flex-direction: column;
   gap: 3px;
   line-height: 1.35;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .issue-item-tag {
@@ -972,10 +988,14 @@ select {
 }
 
 .issue-item-message {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   opacity: 0.9;
   overflow-wrap: anywhere;
-  word-break: break-word;
-  max-width: 100%;
+  word-break: break-all;
+  overflow: auto;
+  max-height: 8em;
 }
 
 /* ── File tree ── */
@@ -1313,7 +1333,7 @@ select {
   line-height: 1.45;
   opacity: 0.9;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: break-all;
 }
 
 .modal label {
