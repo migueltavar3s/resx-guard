@@ -268,24 +268,11 @@ describe('production-like multi-locale project', () => {
     expect(cs).toContain('PayNow');
     expect(cs).toContain('pt: Pagar agora');
 
-    try {
-      const excel = await import('../src/services/excel-io');
-      const payload = {
-        locales: ['', 'pt', 'es'],
-        rows: rows.map((r) => ({
-          familyId: r.familyId,
-          key: r.key,
-          comment: r.comment,
-          values: r.values,
-          issues: [],
-        })),
-      };
-      const buffer = excel.workbookBuffer(payload);
-      const parsed = excel.parseWorkbook(buffer);
-      expect(parsed.rows.length).toBe(rows.length);
-      expect(parsed.rows.find((r) => r.key === 'Welcome')?.values.pt).toBe('Bem-vindo');
-    } catch {
-      // Excel import was removed from the product; parse+grid coverage above still stands.
-    }
+    const excel = await import('../src/services/excel-io');
+    const payload = excel.buildExcelPayload(families, rows, ['', 'pt', 'es']);
+    const buffer = excel.workbookBuffer(payload);
+    const parsed = excel.parseWorkbook(buffer);
+    expect(parsed.rows.length).toBe(rows.length);
+    expect(parsed.rows.find((r) => r.key === 'Welcome')?.values.pt).toBe('Bem-vindo');
   });
 });

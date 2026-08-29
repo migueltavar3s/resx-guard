@@ -32,6 +32,13 @@ import {
 } from './designer-generator';
 import { resolveResxIdentity, toPascalCaseKey } from './naming';
 import { mergeVisibleLocales } from './locale-columns';
+import {
+  buildExcelPayload,
+  parseWorkbook,
+  remapImportedLocales,
+  resolveFamilyForImport,
+  type ExcelWorkbookPayload,
+} from './excel-io';
 
 export class ResourceIndex {
   private families: ResxFamily[] = [];
@@ -200,7 +207,7 @@ export class ResourceIndex {
       visibleLocales: this.visibleLocales,
       settings: this.settings,
       language,
-      version: String(this.context.extension?.packageJSON?.version ?? '0.1.1'),
+      version: String(this.context.extension?.packageJSON?.version ?? '0.2.0'),
     };
   }
 
@@ -427,6 +434,131 @@ export class ResourceIndex {
       const pos = doc.positionAt(idx);
       editor.selection = new vscode.Selection(pos, pos);
       editor.revealRange(new vscode.Range(pos, pos));
+    }
+  }
+
+  getExcelPayload(): ExcelWorkbookPayload {
+    const ids =
+      this.selectedFamilyIds.size > 0
+        ? this.selectedFamilyIds
+        : new Set(this.families.map((f) => f.id));
+    return buildExcelPayload(
+      this.families.filter((f) => ids.has(f.id)),
+      this.rows.filter((r) => ids.has(r.familyId)),
+      this.locales
+    );
+  }
+
+  async importExcelBuffer(buffer: Buffer): Promise<{ created: number; updated: number; skipped: number }> {
+    const payload = parseWorkbook(buffer);
+    return this.importExcelPayload(payload);
+  }
+
+  async importExcelPayload(
+    payload: ExcelWorkbookPayload
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const touched = new Set<string>();
+
+    this.updatingFromUs = true;
+    try {
+      for (const row of payload.rows) {
+        const family = resolveFamilyForImport(this.families, row.resource, this.selectedFamilyIds);
+        if (!family || !row.key.trim()) {
+          skipped += 1;
+          continue;
+        }
+        const key = row.key.trim();
+        const values = remapImportedLocales(row.values, Object.keys(family.files));
+        const exists = this.familyHasKey(family, key);
+        if (!exists) {
+          await this.writeKeyToFamily(family, key, values, row.comment);
+          created += 1;
+        } else {
+          await this.mergeKeyValues(family, key, values);
+          if (row.comment) {
+            const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
+            await setResxComment(filePath, key, row.comment);
+          }
+          updated += 1;
+        }
+        touched.add(family.id);
+        await this.reloadFamilyFiles(family);
+      }
+    } finally {
+      setTimeout(() => {
+        this.updatingFromUs = false;
+      }, 400);
+    }
+
+    this.collectLocales();
+    this.syncVisibleLocales();
+    this.rebuildRowsAndValidate();
+    if (this.settings.updateDesignerCs) {
+      for (const family of this.families) {
+        if (touched.has(family.id)) {
+          await this.maybeUpdateDesigner(family);
+        }
+      }
+    }
+    this.onDidChangeEmitter.fire();
+    return { created, updated, skipped };
+  }
+
+  private async writeKeyToFamily(
+    family: ResxFamily,
+    key: string,
+    values: Record<string, string>,
+    comment = ''
+  ): Promise<void> {
+    const locales = new Set([...Object.keys(family.files), ...Object.keys(values)]);
+    const neutralPath = this.ensureLocalePath(family, NEUTRAL_LOCALE);
+    await addResxEntry(neutralPath, key, values[NEUTRAL_LOCALE] ?? '', comment);
+    for (const locale of locales) {
+      if (locale === NEUTRAL_LOCALE) {
+        continue;
+      }
+      const filePath = this.ensureLocalePath(family, locale);
+      await addResxEntry(filePath, key, values[locale] ?? '');
+    }
+  }
+
+  private async mergeKeyValues(
+    family: ResxFamily,
+    key: string,
+    values: Record<string, string>
+  ): Promise<void> {
+    for (const [locale, value] of Object.entries(values)) {
+      if (value === '') {
+        continue;
+      }
+      const filePath = this.ensureLocalePath(family, locale);
+      await setResxValue(filePath, key, value);
+    }
+  }
+
+  private ensureLocalePath(family: ResxFamily, locale: string): string {
+    if (locale === NEUTRAL_LOCALE || locale === '') {
+      return family.files[NEUTRAL_LOCALE] ?? family.basePath;
+    }
+    let filePath = family.files[locale];
+    if (!filePath) {
+      filePath = this.satellitePath(family.basePath, locale);
+      family.files[locale] = filePath;
+    }
+    return filePath;
+  }
+
+  private async reloadFamilyFiles(family: ResxFamily): Promise<void> {
+    for (const filePath of Object.values(family.files)) {
+      try {
+        const parsed = await parseResxFile(filePath);
+        this.fileCache.set(path.normalize(filePath), parsed);
+      } catch {
+        /* ignore */
+      }
     }
   }
 

@@ -6,9 +6,23 @@ Fast, minimalist ResX translation manager for C# projects in Visual Studio Code.
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/migueltavar3s.resx-guard)](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, instant search, configurable validation, and automatic `Resources.Designer.cs` updates.
+Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, instant search, configurable validation, automatic `Resources.Designer.cs` updates, and Excel import/export.
 
 **Install:** [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard) · ID `migueltavar3s.resx-guard`
+
+## Screenshots
+
+### Grid + Summary
+
+![ResX Guard grid with Summary panel](media/screenshot-grid.png)
+
+### Validation chips and issues
+
+![Validation issues in the grid and Summary](media/screenshot-validation.png)
+
+### Excel import / export
+
+![Excel import and export overview](media/screenshot-excel.png)
 
 ## Features
 
@@ -19,6 +33,7 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 - Validation rules (PascalCase keys, matching string endings, placeholders, missing translations)
 - Warnings in the grid, Summary, and VS Code Problems panel
 - Auto-update `*.Designer.cs` when keys change
+- Import/export Excel (`.xlsx` / `.xls`) for the selected families
 - Extension UI in **English** and **Portuguese**
 
 ## Usage
@@ -26,6 +41,7 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 1. Open a workspace that contains `.resx` files
 2. Run **ResX Guard: Open** from the command palette, or use the Activity Bar icon
 3. Select resource families on the left, edit translations in the grid
+4. Use **Export** / **Import** in the toolbar to round-trip the selected families through Excel (`.xlsx` / `.xls`). Empty cells on import leave existing translations unchanged.
 
 ## Settings
 
@@ -39,10 +55,18 @@ Issues: [github.com/migueltavar3s/resx-guard/issues](https://github.com/miguelta
 
 ## Development
 
+Work on **`dev`**. Merge to **`main`** when you want CI to run critical tests and publish to the Marketplace (`VSCE_PAT` secret required).
+
 ```bash
 npm install
 npm run build
 npm test
+```
+
+Regenerate Marketplace screenshots (optional):
+
+```bash
+node scripts/capture-screenshots.mjs
 ```
 
 ### Test the UI (one step)

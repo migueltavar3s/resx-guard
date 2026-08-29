@@ -2,10 +2,28 @@
   "name": "resx-guard",
   "displayName": "ResX Guard",
   "description": "Fast, minimalist ResX translation manager for C# projects in VS Code",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "migueltavar3s",
   "license": "MIT",
   "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0b1220",
+    "theme": "dark"
+  },
+  "screenshots": [
+    {
+      "path": "media/screenshot-grid.png",
+      "altText": "ResX Guard grid with file tree, language columns, and Summary panel"
+    },
+    {
+      "path": "media/screenshot-validation.png",
+      "altText": "Validation chips for naming, missing translations, and placeholders"
+    },
+    {
+      "path": "media/screenshot-excel.png",
+      "altText": "Excel import and export for selected resource families"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/migueltavar3s/resx-guard.git"
@@ -30,7 +48,9 @@
     "localization",
     "i18n",
     "csharp",
-    "translation"
+    "translation",
+    "excel",
+    "resx manager"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -163,6 +183,7 @@
   },
   "devDependencies": {
     "@tanstack/react-virtual": "^3.1.2",
+    "@testing-library/react": "^14.2.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
@@ -171,10 +192,15 @@
     "@vscode/vsce": "^2.22.0",
     "@xmldom/xmldom": "^0.9.5",
     "esbuild": "^0.20.0",
+    "jsdom": "^24.0.0",
+    "playwright-core": "^1.46.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.12",
     "vitest": "^1.2.2"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }
