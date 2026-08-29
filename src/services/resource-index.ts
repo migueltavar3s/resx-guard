@@ -35,6 +35,8 @@ import { mergeVisibleLocales } from './locale-columns';
 import {
   buildExcelPayload,
   parseWorkbook,
+  remapImportedLocales,
+  resolveFamilyForImport,
   type ExcelWorkbookPayload,
 } from './excel-io';
 
@@ -463,22 +465,19 @@ export class ResourceIndex {
     this.updatingFromUs = true;
     try {
       for (const row of payload.rows) {
-        const family = this.resolveFamilyForImport(row.resource);
+        const family = resolveFamilyForImport(this.families, row.resource, this.selectedFamilyIds);
         if (!family || !row.key.trim()) {
           skipped += 1;
           continue;
         }
         const key = row.key.trim();
+        const values = remapImportedLocales(row.values, Object.keys(family.files));
         const exists = this.familyHasKey(family, key);
         if (!exists) {
-          await this.writeKeyToFamily(family, key, row.values);
-          if (row.comment) {
-            const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-            await setResxComment(filePath, key, row.comment);
-          }
+          await this.writeKeyToFamily(family, key, values, row.comment);
           created += 1;
         } else {
-          await this.mergeKeyValues(family, key, row.values);
+          await this.mergeKeyValues(family, key, values);
           if (row.comment) {
             const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
             await setResxComment(filePath, key, row.comment);
@@ -494,6 +493,8 @@ export class ResourceIndex {
       }, 400);
     }
 
+    this.collectLocales();
+    this.syncVisibleLocales();
     this.rebuildRowsAndValidate();
     if (this.settings.updateDesignerCs) {
       for (const family of this.families) {
@@ -509,15 +510,18 @@ export class ResourceIndex {
   private async writeKeyToFamily(
     family: ResxFamily,
     key: string,
-    values: Record<string, string>
+    values: Record<string, string>,
+    comment = ''
   ): Promise<void> {
-    const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-    await addResxEntry(filePath, key, values[NEUTRAL_LOCALE] ?? '');
-    for (const [locale, satellitePath] of Object.entries(family.files)) {
-      if (locale === NEUTRAL_LOCALE || satellitePath === filePath) {
+    const locales = new Set([...Object.keys(family.files), ...Object.keys(values)]);
+    const neutralPath = this.ensureLocalePath(family, NEUTRAL_LOCALE);
+    await addResxEntry(neutralPath, key, values[NEUTRAL_LOCALE] ?? '', comment);
+    for (const locale of locales) {
+      if (locale === NEUTRAL_LOCALE) {
         continue;
       }
-      await addResxEntry(satellitePath, key, values[locale] ?? '');
+      const filePath = this.ensureLocalePath(family, locale);
+      await addResxEntry(filePath, key, values[locale] ?? '');
     }
   }
 
@@ -530,16 +534,21 @@ export class ResourceIndex {
       if (value === '') {
         continue;
       }
-      let filePath = family.files[locale];
-      if (!filePath && locale !== NEUTRAL_LOCALE) {
-        filePath = this.satellitePath(family.basePath, locale);
-        family.files[locale] = filePath;
-      }
-      if (!filePath) {
-        filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-      }
+      const filePath = this.ensureLocalePath(family, locale);
       await setResxValue(filePath, key, value);
     }
+  }
+
+  private ensureLocalePath(family: ResxFamily, locale: string): string {
+    if (locale === NEUTRAL_LOCALE || locale === '') {
+      return family.files[NEUTRAL_LOCALE] ?? family.basePath;
+    }
+    let filePath = family.files[locale];
+    if (!filePath) {
+      filePath = this.satellitePath(family.basePath, locale);
+      family.files[locale] = filePath;
+    }
+    return filePath;
   }
 
   private async reloadFamilyFiles(family: ResxFamily): Promise<void> {
@@ -551,24 +560,6 @@ export class ResourceIndex {
         /* ignore */
       }
     }
-  }
-
-  private resolveFamilyForImport(resource: string): ResxFamily | undefined {
-    const name = resource.trim();
-    if (!name) {
-      if (this.selectedFamilyIds.size === 1) {
-        const id = [...this.selectedFamilyIds][0];
-        return this.families.find((f) => f.id === id);
-      }
-      return this.families.length === 1 ? this.families[0] : undefined;
-    }
-    const lower = name.toLowerCase();
-    return (
-      this.families.find((f) => f.displayName === name) ??
-      this.families.find((f) => f.id === name) ??
-      this.families.find((f) => f.displayName.toLowerCase() === lower) ??
-      this.families.find((f) => f.basePath.toLowerCase().endsWith(lower))
-    );
   }
 
   private familyHasKey(family: ResxFamily, key: string): boolean {

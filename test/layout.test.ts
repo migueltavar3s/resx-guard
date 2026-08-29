@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
 import { applyColumnResize, clampPanelWidth, distributeToWidth } from '../webview/hooks/usePersistedLayout';
+
+const styles = fs.readFileSync(path.resolve(__dirname, '../webview/styles.css'), 'utf8');
+
+function selectorBlock(selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = styles.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+  expect(match).not.toBeNull();
+  return match?.[1] ?? '';
+}
 
 describe('distributeToWidth', () => {
   it('fills the available width proportionally', () => {
@@ -26,5 +37,23 @@ describe('clampPanelWidth', () => {
     expect(clampPanelWidth(100, 148, 420)).toBe(148);
     expect(clampPanelWidth(900, 200, 560)).toBe(560);
     expect(clampPanelWidth(240.6, 200, 560)).toBe(241);
+  });
+});
+
+describe('summary overflow CSS', () => {
+  it('allows the summary flex pane to shrink within the workspace', () => {
+    expect(selectorBlock('.summary-panel')).toMatch(/\bmin-width\s*:\s*0\s*;/);
+  });
+
+  it('wraps and bounds long summary keys', () => {
+    const block = selectorBlock('.summary-key');
+
+    expect(block).toMatch(/\boverflow-wrap\s*:\s*anywhere\s*;/);
+    expect(block).toMatch(/\bmax-height\s*:\s*[^;]+\s*;/);
+  });
+
+  it('wraps issue messages and editable cell text', () => {
+    expect(selectorBlock('.issue-item-message')).toMatch(/\boverflow-wrap\s*:\s*anywhere\s*;/);
+    expect(selectorBlock('.cell-textarea')).toMatch(/\boverflow-wrap\s*:\s*anywhere\s*;/);
   });
 });

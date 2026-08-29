@@ -26,7 +26,9 @@ export function SummaryPanel({ row, locales }: Props) {
       ) : (
         <>
           <div className="summary-block">
-            <div className="summary-key">{row.key}</div>
+            <div className="summary-key" title={row.key}>
+              {row.key}
+            </div>
             {row.comment && (
               <div className="summary-locale">
                 <div className="label">{t('column.comment')}</div>

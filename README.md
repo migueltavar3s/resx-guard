@@ -27,6 +27,7 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 1. Open a workspace that contains `.resx` files
 2. Run **ResX Guard: Open** from the command palette, or use the Activity Bar icon
 3. Select resource families on the left, edit translations in the grid
+4. Use **Export** / **Import** in the toolbar to round-trip the selected families through Excel (`.xlsx` / `.xls`). Empty cells on import leave existing translations unchanged.
 
 ## Settings
 
