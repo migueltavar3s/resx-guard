@@ -1158,6 +1158,38 @@ select {
   gap: 6px;
 }
 
+.about-gallery-card {
+  overflow: hidden;
+}
+
+.about-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.about-shot {
+  margin: 0;
+  min-width: 0;
+}
+
+.about-shot img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.28));
+  background: #1e1e1e;
+}
+
+.about-shot figcaption {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;

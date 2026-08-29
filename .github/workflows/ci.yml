@@ -19,3 +19,5 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Marketplace publish runs only from .github/workflows/release.yml on push to main
+      # (after a PR from dev → main is merged). Requires secret VSCE_PAT.

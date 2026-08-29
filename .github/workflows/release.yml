@@ -8,6 +8,8 @@ jobs:
   test-and-publish:
     name: Test and publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -24,7 +26,11 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           if [ -z "$VSCE_PAT" ]; then
-            echo "Missing secret VSCE_PAT. Add a Marketplace PAT in repo Settings → Secrets."
+            echo "Missing secret VSCE_PAT."
+            echo "Create a Personal Access Token at https://marketplace.visualstudio.com/manage"
+            echo "with Marketplace (Publish) scope, then add it as repo secret VSCE_PAT."
             exit 1
           fi
+          # Publish the version from package.json (currently 0.2.0).
+          # Merging a PR into main triggers this job and ships to the Marketplace.
           npx --yes @vscode/vsce publish --no-dependencies --pat "$VSCE_PAT"

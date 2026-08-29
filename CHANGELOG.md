@@ -2,11 +2,23 @@
 
 ## 0.2.0
 
-- Restore Excel import/export (toolbar remembers last action)
-- Excel round-trip: Portuguese/English headers, skip empty columns, match families by name without picking the wrong one, create missing locale files, map `PT` → `pt`
-- Summary (and grid/delete dialog) wrap oversized keys so they no longer blow the layout
-- Issue cards in Summary wrap giant PascalCase tokens instead of overflowing the pane
-- GitHub Actions: tests on `dev`, tests + Marketplace publish on `main`
+Marketplace release focused on Excel workflows, a safer Summary pane, and polish for publish.
+
+### Excel import / export
+- Toolbar Export/Import (remembers last action) for selected `.resx` families
+- Round-trip `.xlsx` / `.xls` with English and Portuguese headers
+- Skip empty trailing columns; ignore `Project`; strip BOM on headers
+- Match families by display name or unique basename without greedy false matches
+- Map locale casing (`PT` → `pt`), create missing satellite files, leave empty cells unchanged
+
+### Summary & layout
+- Oversized keys wrap in Summary, grid cells, and the delete dialog
+- Issue cards wrap giant PascalCase tokens so the pane no longer overflows
+- Chrome UI test guards a fixed-width Summary against horizontal growth
+
+### Tooling & packaging
+- GitHub Actions: tests on `dev` and on PRs; tests + Marketplace publish on push to `main`
+- Marketplace gallery screenshots and refreshed extension icon
 
 ## 0.1.1
 
