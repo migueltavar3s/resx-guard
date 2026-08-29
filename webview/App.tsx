@@ -364,6 +364,8 @@ export function App() {
                     style={{
                       width: layout.summaryWidth,
                       flex: `0 0 ${layout.summaryWidth}px`,
+                      minWidth: 0,
+                      maxWidth: '100%',
                     }}
                   >
                     <div className="summary-panel-header">

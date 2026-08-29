@@ -16,6 +16,13 @@ describe('estimateRowHeight', () => {
     expect(wrapped).toBeGreaterThan(short);
     expect(multiline).toBeGreaterThan(short);
   });
+
+  it('grows for a long key without spaces in a narrow key column', () => {
+    const short = estimateRowHeight(['ShortKey'], [120]);
+    const long = estimateRowHeight(['K'.repeat(200)], [120]);
+
+    expect(long).toBeGreaterThan(short);
+  });
 });
 
 describe('issuesForCell', () => {
