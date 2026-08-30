@@ -44,7 +44,7 @@ npm run package -w resx-guard
 Requires Visual Studio 2022+ with **Visual Studio extension development** workload and .NET SDK.
 
 ```bash
-dotnet build apps/visualstudio/ResXGuard.sln -c Release
+dotnet build apps/visualstudio/ResXGuard.sln -c Debug
 dotnet test apps/visualstudio/ResXGuard.sln
 ```
 
