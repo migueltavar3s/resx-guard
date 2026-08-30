@@ -1,6 +1,0 @@
-C:\Users\migue\OneDrive\Ambiente de Trabalho\Projetos\resx-guard\apps\visualstudio\ResXGuard.Core\obj\Debug\netstandard2.0\ResXGuard.Core.csproj.AssemblyReference.cache
-C:\Users\migue\OneDrive\Ambiente de Trabalho\Projetos\resx-guard\apps\visualstudio\ResXGuard.Core\obj\Debug\netstandard2.0\ResXGuard.Core.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\migue\OneDrive\Ambiente de Trabalho\Projetos\resx-guard\apps\visualstudio\ResXGuard.Core\obj\Debug\netstandard2.0\ResXGuard.Core.AssemblyInfoInputs.cache
-C:\Users\migue\OneDrive\Ambiente de Trabalho\Projetos\resx-guard\apps\visualstudio\ResXGuard.Core\obj\Debug\netstandard2.0\ResXGuard.Core.AssemblyInfo.cs
-C:\Users\migue\OneDrive\Ambiente de Trabalho\Projetos\resx-guard\apps\visualstudio\ResXGuard.Core\obj\Debug\netstandard2.0\ResXGuard.Core.csproj.CoreCompileInputs.cache
-C:\Users\migue\OneDrive\Ambiente de Trabalho\Projetos\resx-guard\apps\visualstudio\ResXGuard.Core\obj\Debug\netstandard2.0\ResXGuard.Core.sourcelink.json
