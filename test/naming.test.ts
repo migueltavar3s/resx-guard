@@ -9,7 +9,7 @@ import {
   placeholdersMatch,
   resolveResxIdentity,
   toPascalCaseKey,
-} from '../src/services/naming';
+} from '@resx-guard/core-ts';
 
 describe('toPascalCaseKey', () => {
   it('converts English phrases to PascalCase', () => {

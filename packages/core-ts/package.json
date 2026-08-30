@@ -1,0 +1,14 @@
+{
+  "name": "@resx-guard/core-ts",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./version": "./src/version.ts"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.5",
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import type { ResourceRow } from '../src/models/types';
-import { SummaryPanel } from '../webview/components/SummaryPanel';
+import type { ResourceRow } from '@resx-guard/core-ts';
+import { SummaryPanel } from '../packages/ui/components/SummaryPanel';
 
 const longToken = `Ohewefwehfjwehflwehfwehfwehfwefhwkefhwefwefwefwefwet${'x'.repeat(80)}`;
 

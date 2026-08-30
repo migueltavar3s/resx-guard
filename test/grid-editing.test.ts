@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { estimateRowHeight } from '../webview/utils/rowSize';
-import { issuesForCell, tooltipLines } from '../webview/utils/issueMeta';
-import { setLanguage } from '../webview/i18n';
-import type { ValidationIssue } from '../src/models/types';
+import { estimateRowHeight } from '../packages/ui/utils/rowSize';
+import { issuesForCell, tooltipLines } from '../packages/ui/utils/issueMeta';
+import { setLanguage } from '../packages/ui/i18n';
+import type { ValidationIssue } from '@resx-guard/core-ts';
 
 describe('estimateRowHeight', () => {
   it('stays compact for a single short line', () => {
