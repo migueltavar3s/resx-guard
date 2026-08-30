@@ -49,7 +49,7 @@
   "settings.rules.missingTranslation": "Warn on missing translations",
   "settings.rules.duplicateKeys": "Error on duplicate keys",
   "about.title": "About",
-  "about.blurb": "A spreadsheet-style manager for C# .resx translations in VS Code.",
+  "about.blurb": "A spreadsheet-style manager for C# .resx translations in VS Code and Visual Studio.",
   "about.version": "Version {0}",
   "about.gallery": "Product tour",
   "about.galleryHint": "How ResX Guard looks while you edit, validate, and round-trip Excel.",

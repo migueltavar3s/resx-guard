@@ -1,6 +1,30 @@
 :root {
   color-scheme: light dark;
 
+  /* WebView2 / host-agnostic fallbacks (VS Code injects these automatically) */
+  --vscode-font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --vscode-font-size: 13px;
+  --vscode-foreground: #cccccc;
+  --vscode-descriptionForeground: #9d9d9d;
+  --vscode-editor-background: #1e1e1e;
+  --vscode-sideBar-background: #252526;
+  --vscode-panel-border: #3c3c3c;
+  --vscode-input-background: #3c3c3c;
+  --vscode-input-foreground: #cccccc;
+  --vscode-input-border: #3c3c3c;
+  --vscode-dropdown-background: #3c3c3c;
+  --vscode-dropdown-foreground: #cccccc;
+  --vscode-dropdown-border: #3c3c3c;
+  --vscode-editorWidget-background: #252526;
+  --vscode-widget-border: #454545;
+  --vscode-list-hoverBackground: rgba(128, 128, 128, 0.15);
+  --vscode-list-activeSelectionBackground: rgba(0, 127, 212, 0.35);
+  --vscode-list-activeSelectionForeground: #ffffff;
+  --vscode-focusBorder: #007fd4;
+  --vscode-toolbar-hoverBackground: rgba(128, 128, 128, 0.15);
+  --vscode-errorForeground: #f14c4c;
+  --vscode-textLink-foreground: #3794ff;
+
   /* Issue rule colors — one hue per validation rule */
   --issue-duplicateKeys: var(--vscode-errorForeground, #f14c4c);
   --issue-missingTranslation: #e8a317;
@@ -22,10 +46,10 @@ body,
 }
 
 body {
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-  color: var(--vscode-foreground);
-  background: var(--vscode-editor-background);
+  font-family: var(--vscode-font-family, "Segoe UI", system-ui, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground, #cccccc);
+  background: var(--vscode-editor-background, #1e1e1e);
 }
 
 button,
@@ -82,6 +106,13 @@ select {
   display: flex;
   flex: 1;
   min-height: 0;
+}
+
+.app > .page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
 }
 
 .sidebar,
@@ -221,7 +252,7 @@ select {
   position: fixed;
   z-index: 80;
   padding: 4px;
-  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background, #252526));
   border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.4));
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -271,7 +302,7 @@ select {
   max-height: 300px;
   overflow: auto;
   padding: 10px;
-  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background, #252526));
   border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.4));
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
@@ -537,7 +568,7 @@ select {
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background, var(--vscode-editor-background)));
+  background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background, var(--vscode-editor-background, #3c3c3c)));
   color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
   border: 1px solid var(--vscode-dropdown-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.4)));
   border-radius: 6px;
@@ -1099,8 +1130,12 @@ select {
 
 .page {
   padding: 18px 22px 28px;
+  box-sizing: border-box;
+}
+
+.page .settings,
+.page .about-page {
   max-width: 720px;
-  overflow: auto;
 }
 
 .page h2 {
@@ -1345,7 +1380,7 @@ select {
 }
 
 .modal {
-  background: var(--vscode-editor-background);
+  background: var(--vscode-editor-background, #1e1e1e);
   border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
   border-radius: 8px;
   padding: 16px;
@@ -1379,9 +1414,9 @@ select {
 .modal textarea {
   width: 100%;
   margin-bottom: 10px;
-  background: var(--vscode-input-background);
-  border: 1px solid var(--vscode-input-border, transparent);
-  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background, #3c3c3c);
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  color: var(--vscode-input-foreground, #cccccc);
   padding: 7px 9px;
   border-radius: 4px;
   font-size: 12px;

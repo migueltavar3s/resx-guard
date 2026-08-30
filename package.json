@@ -10,6 +10,7 @@
     "sync-version": "node scripts/sync-version.mjs",
     "build": "npm run sync-version && npm run build -w resx-guard",
     "build:ui": "node scripts/build-ui.mjs",
+    "build:vsix": "node scripts/sync-version.mjs && node scripts/build-ui.mjs && dotnet test apps/visualstudio/ResXGuard.sln -c Release --verbosity quiet",
     "test": "vitest run",
     "test:watch": "vitest",
     "package": "npm run package -w resx-guard"
