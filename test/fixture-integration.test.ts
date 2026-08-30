@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as path from 'path';
-import { parseResxFile } from '../src/services/resx-parser';
-import { groupResxFiles } from '../src/services/workspace-scanner';
-import { buildRows, validateFamily } from '../src/services/validation-engine';
-import { resolveDesignerMeta, generateDesignerCs, buildDesignerEntries } from '../src/services/designer-generator';
+import { parseResxFile, groupResxFiles, buildRows, validateFamily, resolveDesignerMeta, generateDesignerCs, buildDesignerEntries } from '@resx-guard/core-ts';
 
 const fixtureRoot = path.resolve(__dirname, '../fixtures/sample-project');
 

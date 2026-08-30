@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "dgSpecHash": "uk0dFEjkZH0=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\migue\\OneDrive\\Ambiente de Trabalho\\Projetos\\resx-guard\\apps\\visualstudio\\ResXGuard.Core.Tests\\ResXGuard.Core.Tests.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\microsoft.codecoverage\\17.11.1\\microsoft.codecoverage.17.11.1.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\microsoft.net.test.sdk\\17.11.1\\microsoft.net.test.sdk.17.11.1.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\microsoft.testplatform.objectmodel\\17.10.0\\microsoft.testplatform.objectmodel.17.10.0.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\system.collections.immutable\\1.5.0\\system.collections.immutable.1.5.0.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\system.reflection.metadata\\1.6.0\\system.reflection.metadata.1.6.0.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit\\2.9.2\\xunit.2.9.2.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.abstractions\\2.0.3\\xunit.abstractions.2.0.3.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.analyzers\\1.16.0\\xunit.analyzers.1.16.0.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.assert\\2.9.2\\xunit.assert.2.9.2.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.core\\2.9.2\\xunit.core.2.9.2.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.extensibility.core\\2.9.2\\xunit.extensibility.core.2.9.2.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.extensibility.execution\\2.9.2\\xunit.extensibility.execution.2.9.2.nupkg.sha512",
+    "C:\\Users\\migue\\AppData\\Local\\Temp\\cursor-sandbox-cache\\2a1b229748196a89692a6573ed8b9411\\nuget\\xunit.runner.visualstudio\\2.8.2\\xunit.runner.visualstudio.2.8.2.nupkg.sha512"
+  ],
+  "logs": []
+}

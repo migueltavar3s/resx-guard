@@ -1,0 +1,191 @@
+{
+  "name": "resx-guard",
+  "displayName": "ResX Guard",
+  "description": "Fast, minimalist ResX translation manager for C# projects in VS Code",
+  "version": "0.2.0",
+  "publisher": "migueltavar3s",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0b1220",
+    "theme": "dark"
+  },
+  "screenshots": [
+    {
+      "path": "media/screenshot-grid.png",
+      "altText": "ResX Guard grid with file tree, language columns, and Summary panel"
+    },
+    {
+      "path": "media/screenshot-validation.png",
+      "altText": "Validation chips for naming, missing translations, and placeholders"
+    },
+    {
+      "path": "media/screenshot-excel.png",
+      "altText": "Excel import and export for selected resource families"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/migueltavar3s/resx-guard.git"
+  },
+  "homepage": "https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard",
+  "bugs": {
+    "url": "https://github.com/migueltavar3s/resx-guard/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/migueltavar3s"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "resx",
+    "localization",
+    "i18n",
+    "csharp",
+    "translation",
+    "excel",
+    "resx manager"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "contributes": {
+    "commands": [
+      {
+        "command": "resxGuard.open",
+        "title": "%resxGuard.command.open%",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "resxGuard.refresh",
+        "title": "%resxGuard.command.refresh%",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "resx-guard",
+          "title": "ResX Guard",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "resx-guard": [
+        {
+          "type": "webview",
+          "id": "resxGuard.sidebar",
+          "name": "%resxGuard.view.sidebar%"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "resxGuard.open",
+          "when": "view == resxGuard.sidebar",
+          "group": "navigation"
+        },
+        {
+          "command": "resxGuard.refresh",
+          "when": "view == resxGuard.sidebar",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "resxGuard.open"
+        },
+        {
+          "command": "resxGuard.refresh"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ResX Guard",
+      "properties": {
+        "resxGuard.neutralLocale": {
+          "type": "string",
+          "default": "",
+          "description": "%resxGuard.config.neutralLocale%"
+        },
+        "resxGuard.keyNaming": {
+          "type": "string",
+          "enum": [
+            "pascalFromNeutral",
+            "manual"
+          ],
+          "default": "pascalFromNeutral",
+          "description": "%resxGuard.config.keyNaming%"
+        },
+        "resxGuard.updateDesignerCs": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.updateDesignerCs%"
+        },
+        "resxGuard.visibleLocales": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%resxGuard.config.visibleLocales%"
+        },
+        "resxGuard.rules.keyPascalCase": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.rules.keyPascalCase%"
+        },
+        "resxGuard.rules.matchingSuffix": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.rules.matchingSuffix%"
+        },
+        "resxGuard.rules.placeholders": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.rules.placeholders%"
+        },
+        "resxGuard.rules.missingTranslation": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.rules.missingTranslation%"
+        },
+        "resxGuard.rules.duplicateKeys": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.rules.duplicateKeys%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node ../../scripts/sync-version.mjs && npm run build:ext && npm run build:webview",
+    "build:ext": "node esbuild.mjs",
+    "build:webview": "node ../../scripts/build-ui.mjs",
+    "watch": "npm run watch:ext",
+    "watch:ext": "node esbuild.mjs --watch",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@resx-guard/core-ts": "*",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "@xmldom/xmldom": "^0.9.5",
+    "esbuild": "^0.20.0"
+  }
+}

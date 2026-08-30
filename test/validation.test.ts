@@ -4,9 +4,9 @@ import {
   attachIssuesToRows,
   buildRows,
   validateFamily,
-} from '../src/services/validation-engine';
-import type { ResxFamily, ResxFile } from '../src/models/types';
-import { groupResxFiles } from '../src/services/workspace-scanner';
+} from '@resx-guard/core-ts';
+import type { ResxFamily, ResxFile } from '@resx-guard/core-ts';
+import { groupResxFiles } from '@resx-guard/core-ts';
 
 const rules = {
   keyPascalCase: true,

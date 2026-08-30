@@ -11,7 +11,7 @@ import {
   deleteResxEntry,
   addResxEntry,
   renameResxKey,
-} from '../src/services/resx-parser';
+} from '@resx-guard/core-ts';
 
 const SAMPLE = `<?xml version="1.0" encoding="utf-8"?>
 <root>

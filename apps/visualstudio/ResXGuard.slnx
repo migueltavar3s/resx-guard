@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ResXGuard.Core.Tests/ResXGuard.Core.Tests.csproj" />
+  <Project Path="ResXGuard.Core/ResXGuard.Core.csproj" />
+  <Project Path="ResXGuard/ResXGuard.csproj" />
+</Solution>

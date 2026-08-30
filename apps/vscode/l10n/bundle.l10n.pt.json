@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "resxGuard.command.open": "ResX Guard: Abrir",
+  "resxGuard.command.refresh": "ResX Guard: Atualizar",
+  "resxGuard.view.sidebar": "ResX Guard",
+  "resxGuard.config.neutralLocale": "Etiqueta do locale neutro/base (vazio = .resx sem cultura)",
+  "resxGuard.config.keyNaming": "Como as keys são sugeridas a partir do valor neutro",
+  "resxGuard.config.updateDesignerCs": "Atualizar automaticamente o Resources.Designer.cs quando as keys mudam",
+  "resxGuard.config.visibleLocales": "Locales mostrados como colunas na grelha (vazio = todos)",
+  "resxGuard.config.rules.keyPascalCase": "Avisar quando a key não é PascalCase do valor em inglês neutro",
+  "resxGuard.config.rules.matchingSuffix": "Avisar quando as traduções não terminam como a string neutra",
+  "resxGuard.config.rules.placeholders": "Avisar quando os placeholders {0}/{name} diferem do neutro",
+  "resxGuard.config.rules.missingTranslation": "Avisar quando falta uma tradução para um locale",
+  "resxGuard.config.rules.duplicateKeys": "Erro quando existem keys duplicadas no mesmo ficheiro"
+}
