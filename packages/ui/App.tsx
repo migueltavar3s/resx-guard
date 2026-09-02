@@ -8,7 +8,12 @@ import type {
 import { setLanguage, t } from './i18n';
 import { onHostMessage, post } from './vscodeApi';
 import { FileTree } from './components/FileTree';
-import { ResourceGrid, type ColumnFilters, type IssueFilter } from './components/ResourceGrid';
+import {
+  emptyColumnFilters,
+  ResourceGrid,
+  type ColumnFilters,
+  type IssueFilter,
+} from './components/ResourceGrid';
 import { SettingsPage } from './components/SettingsPage';
 import { AboutPage } from './components/AboutPage';
 import { AddEntryModal } from './components/AddEntryModal';
@@ -25,16 +30,10 @@ function normalize(text: string): string {
   return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-const defaultFilters = (): ColumnFilters => ({
-  key: '',
-  issues: 'all',
-  locales: {},
-});
-
 export function App() {
   const [snapshot, setSnapshot] = useState<IndexSnapshot | null>(null);
   const [tab, setTab] = useState<Tab>('main');
-  const [filters, setFilters] = useState<ColumnFilters>(defaultFilters);
+  const [filters, setFilters] = useState<ColumnFilters>(emptyColumnFilters);
   const [selected, setSelected] = useState<ResourceRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
@@ -379,7 +378,13 @@ export function App() {
                         ×
                       </button>
                     </div>
-                    <SummaryPanel row={selected} locales={allLocales} />
+                    <SummaryPanel
+                      row={selected}
+                      locales={allLocales}
+                      onApplyNamingSuggestion={(familyId, oldKey, newKey) =>
+                        post({ type: 'renameKey', familyId, oldKey, newKey })
+                      }
+                    />
                   </aside>
                 </>
               )}

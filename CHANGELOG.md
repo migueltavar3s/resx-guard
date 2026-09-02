@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1
+
+Internal sideload release (VS Code + Visual Studio). Not published to the Marketplace until this lands on `main`.
+
+### Filters
+- Empty filter results keep the grid header, so filters stay visible
+- **Clear filters** restores the full row list in one click
+
+### Naming
+- PascalCase key warnings include a `suggestedKey`
+- **Apply** in the Issues column and in Summary renames the key through the existing host action
+
+### Issues, warnings, and errors
+- An *issue* is any validation finding; *errors* are duplicate keys; *warnings* are quality checks
+- Portuguese copy no longer mixes “Avisos” with “Warnings”
+- Summary legend and Issues tooltips match that distinction
+
 ## 0.2.0
 
 Marketplace release focused on Excel workflows, a safer Summary pane, and polish for publish.

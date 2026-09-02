@@ -822,6 +822,23 @@ select {
   font-size: 8px;
 }
 
+.issue-apply-chip {
+  border: 1px solid var(--vscode-button-border, transparent);
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.issue-apply-chip:hover {
+  filter: brightness(1.08);
+}
+
 .issue-tooltip {
   position: fixed;
   z-index: 90;
@@ -984,6 +1001,13 @@ select {
   background: rgba(80, 180, 100, 0.1);
 }
 
+.summary-issues-hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
 .issue-list {
   list-style: none;
   padding: 0;
@@ -1016,6 +1040,33 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--issue-accent);
+}
+
+.issue-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.issue-item-severity {
+  font-size: 9px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.issue-apply-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .issue-item-message {
@@ -1193,38 +1244,6 @@ select {
   gap: 6px;
 }
 
-.about-gallery-card {
-  overflow: hidden;
-}
-
-.about-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.about-shot {
-  margin: 0;
-  min-width: 0;
-}
-
-.about-shot img {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.28));
-  background: #1e1e1e;
-}
-
-.about-shot figcaption {
-  margin-top: 6px;
-  font-size: 11px;
-  opacity: 0.7;
-  line-height: 1.4;
-}
-
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1338,6 +1357,18 @@ select {
   opacity: 0.65;
   text-align: center;
   font-size: 12px;
+}
+
+.grid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+}
+
+.grid-empty .empty {
+  padding: 0;
 }
 
 .loading::after {

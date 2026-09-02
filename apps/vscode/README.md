@@ -10,20 +10,6 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 
 **Install (VS Code):** [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard) · ID `migueltavar3s.resx-guard`
 
-## Screenshots
-
-### Grid + Summary
-
-![ResX Guard grid with Summary panel](apps/vscode/media/screenshot-grid.png)
-
-### Validation chips and issues
-
-![Validation issues in the grid and Summary](apps/vscode/media/screenshot-validation.png)
-
-### Excel import / export
-
-![Excel import and export overview](apps/vscode/media/screenshot-excel.png)
-
 ## Features
 
 - Spreadsheet-style grid: keys × languages

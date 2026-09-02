@@ -47,6 +47,10 @@ export function primaryRule(issues: ValidationIssue[]): IssueRule | null {
   return rules[0] ?? null;
 }
 
+export function namingSuggestedKey(issues: ValidationIssue[]): string | undefined {
+  return issues.find((i) => i.rule === 'keyPascalCase' && i.suggestedKey)?.suggestedKey;
+}
+
 export interface IssueTooltipLine {
   rule: IssueRule;
   label: string;

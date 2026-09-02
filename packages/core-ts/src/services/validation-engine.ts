@@ -74,6 +74,7 @@ export function validateFamily(
           message: `Key should be PascalCase of neutral value: expected "${expected}"`,
           key,
           familyId: family.id,
+          suggestedKey: expected,
         });
       }
     }

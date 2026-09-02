@@ -17,6 +17,8 @@ export interface ValidationIssue {
   locale?: string;
   key: string;
   familyId: string;
+  /** PascalCase key suggestion for `keyPascalCase` issues. */
+  suggestedKey?: string;
 }
 
 export interface ResxEntry {

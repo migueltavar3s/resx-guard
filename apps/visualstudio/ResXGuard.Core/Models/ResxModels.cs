@@ -24,6 +24,7 @@ public sealed class ValidationIssue
     public string? Locale { get; init; }
     public string Key { get; init; } = "";
     public string FamilyId { get; init; } = "";
+    public string? SuggestedKey { get; init; }
 }
 
 public sealed class ResxEntry

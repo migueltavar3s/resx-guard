@@ -2,7 +2,7 @@
   "name": "resx-guard",
   "displayName": "ResX Guard",
   "description": "Fast, minimalist ResX translation manager for C# projects in VS Code",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "migueltavar3s",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -10,20 +10,6 @@
     "color": "#0b1220",
     "theme": "dark"
   },
-  "screenshots": [
-    {
-      "path": "media/screenshot-grid.png",
-      "altText": "ResX Guard grid with file tree, language columns, and Summary panel"
-    },
-    {
-      "path": "media/screenshot-validation.png",
-      "altText": "Validation chips for naming, missing translations, and placeholders"
-    },
-    {
-      "path": "media/screenshot-excel.png",
-      "altText": "Excel import and export for selected resource families"
-    }
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/migueltavar3s/resx-guard.git"
