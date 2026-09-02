@@ -13,7 +13,7 @@ test/             Vitest tests (core-ts contract)
 
 ## Version
 
-Single source of truth: [`version.json`](version.json). Run `npm run sync-version` before release — it updates `apps/vscode/package.json`, `packages/core-ts/src/version.ts`, and Visual Studio `Directory.Build.props`.
+Single source of truth: [`version.json`](version.json). Run `npm run sync-version` before release — it updates workspace `package.json` files, `packages/core-ts/src/version.ts`, Visual Studio `Directory.Build.props` / `Version.cs`, and both VSIX manifests.
 
 ## Development workflow
 
