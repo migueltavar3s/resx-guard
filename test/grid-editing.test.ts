@@ -1,8 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { estimateRowHeight } from '../packages/ui/utils/rowSize';
-import { issuesForCell, tooltipLines } from '../packages/ui/utils/issueMeta';
+import { issuesForCell, namingSuggestedKey, tooltipLines } from '../packages/ui/utils/issueMeta';
 import { setLanguage } from '../packages/ui/i18n';
 import type { ValidationIssue } from '@resx-guard/core-ts';
+
+const issues: ValidationIssue[] = [
+  {
+    rule: 'keyPascalCase',
+    severity: 'warning',
+    message: 'Key naming',
+    key: 'Confirm',
+    familyId: 'f',
+    suggestedKey: 'ConfirmNow',
+  },
+  {
+    rule: 'matchingSuffix',
+    severity: 'warning',
+    message: 'Ending mismatch',
+    key: 'Confirm',
+    locale: 'pt',
+    familyId: 'f',
+  },
+  {
+    rule: 'missingTranslation',
+    severity: 'warning',
+    message: 'Missing pt',
+    key: 'Empty',
+    locale: 'pt',
+    familyId: 'f',
+  },
+];
 
 describe('estimateRowHeight', () => {
   it('stays compact for a single short line', () => {
@@ -26,32 +53,6 @@ describe('estimateRowHeight', () => {
 });
 
 describe('issuesForCell', () => {
-  const issues: ValidationIssue[] = [
-    {
-      rule: 'keyPascalCase',
-      severity: 'warning',
-      message: 'Key naming',
-      key: 'Confirm',
-      familyId: 'f',
-    },
-    {
-      rule: 'matchingSuffix',
-      severity: 'warning',
-      message: 'Ending mismatch',
-      key: 'Confirm',
-      locale: 'pt',
-      familyId: 'f',
-    },
-    {
-      rule: 'missingTranslation',
-      severity: 'warning',
-      message: 'Missing pt',
-      key: 'Empty',
-      locale: 'pt',
-      familyId: 'f',
-    },
-  ];
-
   it('keeps key-level issues on the key column only', () => {
     expect(issuesForCell(issues).map((i) => i.rule)).toEqual(['keyPascalCase']);
   });
@@ -62,6 +63,12 @@ describe('issuesForCell', () => {
       'missingTranslation',
     ]);
     expect(issuesForCell(issues, '')).toEqual([]);
+  });
+});
+
+describe('namingSuggestedKey', () => {
+  it('returns the PascalCase suggestion from a naming warning', () => {
+    expect(namingSuggestedKey(issues)).toBe('ConfirmNow');
   });
 });
 

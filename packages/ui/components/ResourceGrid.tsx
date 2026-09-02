@@ -12,7 +12,13 @@ import { t } from '../i18n';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterSelect } from './FilterSelect';
 import { IssueChip } from './IssueChip';
-import { issuesForCell, primaryRule, ruleClass, uniqueRules } from '../utils/issueMeta';
+import {
+  issuesForCell,
+  namingSuggestedKey,
+  primaryRule,
+  ruleClass,
+  uniqueRules,
+} from '../utils/issueMeta';
 import { autosizeTextarea, estimateRowHeight } from '../utils/rowSize';
 import { usePersistedSet } from '../hooks/usePersistedSet';
 
@@ -24,6 +30,20 @@ export interface ColumnFilters {
   key: string;
   issues: IssueFilter;
   locales: Record<string, string>;
+}
+
+export function emptyColumnFilters(): ColumnFilters {
+  return { key: '', issues: 'all', locales: {} };
+}
+
+export function hasActiveColumnFilters(filters: ColumnFilters): boolean {
+  if (filters.issues !== 'all') {
+    return true;
+  }
+  if (filters.key.trim().length > 0) {
+    return true;
+  }
+  return Object.values(filters.locales).some((value) => value.trim().length > 0);
 }
 
 interface Props {
@@ -254,17 +274,12 @@ export function ResourceGrid({
       locales: { ...filters.locales, [locale]: value },
     });
 
-  if (rows.length === 0) {
-    return (
-      <div className="grid-wrap" ref={setParentNode}>
-        <div className="empty">{t('empty.grid')}</div>
-      </div>
-    );
-  }
-
   if (columns.length === 0) {
     return <div className="empty">{t('columns.noneVisible')}</div>;
   }
+
+  const filtersActive = hasActiveColumnFilters(filters);
+  const emptyMessage = filtersActive ? t('empty.grid.filtered') : t('empty.grid');
 
   const renderHeaderCell = (col: ColumnDef, rowKind: 'title' | 'filter') => {
     if (col.kind === 'key') {
@@ -282,7 +297,7 @@ export function ResourceGrid({
     }
     if (col.kind === 'issues') {
       return rowKind === 'title' ? (
-        t('column.issues')
+        <span title={t('column.issues.hint')}>{t('column.issues')}</span>
       ) : (
         <FilterSelect
           value={filters.issues}
@@ -331,13 +346,27 @@ export function ResourceGrid({
           ))}
         </div>
 
-        <div
-          style={{
-            height: virtualizer.getTotalSize(),
-            position: 'relative',
-            width: rowWidth,
-          }}
-        >
+        {rows.length === 0 ? (
+          <div className="grid-empty">
+            <div className="empty">{emptyMessage}</div>
+            {filtersActive ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => onFiltersChange(emptyColumnFilters())}
+              >
+                {t('filter.clear')}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div
+            style={{
+              height: virtualizer.getTotalSize(),
+              position: 'relative',
+              width: rowWidth,
+            }}
+          >
           {virtualizer.getVirtualItems().map((vItem) => {
             const item = flat[vItem.index];
             if (!item) {
@@ -405,7 +434,8 @@ export function ResourceGrid({
               />
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -482,7 +512,12 @@ function GridDataRow({
         if (col.kind === 'issues') {
           return (
             <div key={col.id} className="grid-cell issues">
-              <IssueIndicators row={row} />
+              <IssueIndicators
+                row={row}
+                onApplyNaming={(suggestedKey) =>
+                  onRenameKey(row.familyId, row.key, suggestedKey)
+                }
+              />
             </div>
           );
         }
@@ -513,17 +548,38 @@ function issueCellClass(row: ResourceRow, locale?: string): string {
   return rule ? ` has-issue ${ruleClass(rule)}` : '';
 }
 
-function IssueIndicators({ row }: { row: ResourceRow }) {
+function IssueIndicators({
+  row,
+  onApplyNaming,
+}: {
+  row: ResourceRow;
+  onApplyNaming: (suggestedKey: string) => void;
+}) {
   if (row.issues.length === 0) {
     return <span className="issue-empty" aria-hidden>—</span>;
   }
   const rules = uniqueRules(row.issues);
+  const suggestedKey = namingSuggestedKey(row.issues);
   return (
     <div className="issue-chips">
       {rules.map((rule) => {
         const ofRule = row.issues.filter((i) => i.rule === rule);
         return <IssueChip key={rule} rule={rule} issues={ofRule} count={ofRule.length} />;
       })}
+      {suggestedKey ? (
+        <button
+          type="button"
+          className="issue-apply-chip"
+          title={t('issue.naming.apply', suggestedKey)}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onApplyNaming(suggestedKey);
+          }}
+        >
+          {t('issue.naming.applyShort')}
+        </button>
+      ) : null}
     </div>
   );
 }

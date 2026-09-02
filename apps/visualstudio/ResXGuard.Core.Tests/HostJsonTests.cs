@@ -49,6 +49,26 @@ public sealed class HostJsonTests
     }
 
     [Fact]
+    public void Serialize_includes_suggestedKey_camelCase()
+    {
+        var json = HostJson.Serialize(new ValidationIssue
+        {
+            Rule = IssueRule.KeyPascalCase,
+            Severity = IssueSeverity.Warning,
+            Message = "Key should be PascalCase",
+            Key = "WrongKey",
+            FamilyId = "f1",
+            SuggestedKey = "SaveFailed"
+        });
+        var obj = JObject.Parse(json);
+
+        Assert.Equal("keyPascalCase", obj["rule"]?.ToString());
+        Assert.Equal("warning", obj["severity"]?.ToString());
+        Assert.Equal("SaveFailed", obj["suggestedKey"]?.ToString());
+        Assert.Null(obj["SuggestedKey"]);
+    }
+
+    [Fact]
     public void NormalizeIncomingWebMessage_wraps_plain_string_as_type()
     {
         var json = HostJson.NormalizeIncomingWebMessage(null, "ready");

@@ -59,7 +59,8 @@ public static class ValidationEngine
                         Severity = IssueSeverity.Warning,
                         Message = $"Key should be PascalCase of neutral value: expected \"{expected}\"",
                         Key = key,
-                        FamilyId = family.Id
+                        FamilyId = family.Id,
+                        SuggestedKey = expected
                     });
                 }
             }
