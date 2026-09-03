@@ -47,7 +47,7 @@
   "settings.designer": "Atualizar Designer.cs automaticamente",
   "settings.designer.hint": "Manter a classe C# fortemente tipada sincronizada com o .resx.",
   "settings.namingSuggestions": "Mostrar sugestões de nome",
-  "settings.namingSuggestions.hint": "Quando a key não é PascalCase do valor neutro, mostra uma sugestão clicável na grelha. Independente da regra de validação PascalCase.",
+  "settings.namingSuggestions.hint": "Quando a key não é PascalCase do valor neutro, mostra Aplicar na grelha. Independente da regra de validação PascalCase.",
   "settings.rules": "Regras de validação",
   "settings.rules.hint": "Cada resultado é um problema. Keys duplicadas são erros; as outras regras são avisos. Aparecem como chips na grelha e no resumo.",
   "settings.rules.keyPascalCase": "A key deve ser PascalCase do valor neutro",

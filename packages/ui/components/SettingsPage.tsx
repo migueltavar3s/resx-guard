@@ -43,6 +43,18 @@ export function SettingsPage({ settings, onChange }: Props) {
             {t('settings.keyNaming.manual')}
           </button>
         </div>
+        <label className="toggle-row">
+          <span>
+            <span className="toggle-title">{t('settings.namingSuggestions')}</span>
+            <span className="toggle-hint">{t('settings.namingSuggestions.hint')}</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={settings.namingSuggestions !== false}
+            onChange={(e) => onChange({ namingSuggestions: e.target.checked })}
+          />
+          <span className="toggle-track" aria-hidden />
+        </label>
       </section>
 
       <section className="setting-card">
@@ -55,21 +67,6 @@ export function SettingsPage({ settings, onChange }: Props) {
             type="checkbox"
             checked={settings.updateDesignerCs}
             onChange={(e) => onChange({ updateDesignerCs: e.target.checked })}
-          />
-          <span className="toggle-track" aria-hidden />
-        </label>
-      </section>
-
-      <section className="setting-card">
-        <label className="toggle-row">
-          <span>
-            <span className="toggle-title">{t('settings.namingSuggestions')}</span>
-            <span className="toggle-hint">{t('settings.namingSuggestions.hint')}</span>
-          </span>
-          <input
-            type="checkbox"
-            checked={settings.namingSuggestions !== false}
-            onChange={(e) => onChange({ namingSuggestions: e.target.checked })}
           />
           <span className="toggle-track" aria-hidden />
         </label>

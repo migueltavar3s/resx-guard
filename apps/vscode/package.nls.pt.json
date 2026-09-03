@@ -5,7 +5,7 @@
   "resxGuard.config.neutralLocale": "Etiqueta do locale neutro/base (vazio = .resx sem cultura)",
   "resxGuard.config.keyNaming": "Como as keys são sugeridas a partir do valor neutro",
   "resxGuard.config.updateDesignerCs": "Atualizar automaticamente o Resources.Designer.cs quando as keys mudam",
-  "resxGuard.config.namingSuggestions": "Mostrar uma sugestão de nome clicável na grelha quando a key não é PascalCase do valor neutro. Independente da regra de validação PascalCase.",
+  "resxGuard.config.namingSuggestions": "Mostrar um Aplicar na grelha quando a key não é PascalCase do valor neutro. Independente da regra de validação PascalCase.",
   "resxGuard.config.visibleLocales": "Locales mostrados como colunas na grelha (vazio = todos)",
   "resxGuard.config.rules.keyPascalCase": "Avisar quando a key não é PascalCase do valor em inglês neutro",
   "resxGuard.config.rules.matchingSuffix": "Avisar quando as traduções não terminam como a string neutra",

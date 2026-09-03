@@ -3,8 +3,8 @@
 ## Unreleased
 
 ### Suggestions
-- Naming suggestion is a clickable chip (`Naming` + suggested key). Approve lives on that chip, not a separate button, and not in Summary
-- New **Show naming suggestions** setting (`namingSuggestions`), independent of the PascalCase validation rule
+- PascalCase naming issues keep a **Naming** chip plus a separate **Apply** button in the grid. Approve does not live in Summary
+- **Show naming suggestions** (`namingSuggestions`) lives in the Key naming settings card, independent of the PascalCase validation rule
 - Issue chips no longer use the help (`?`) cursor
 
 ### Usage Count

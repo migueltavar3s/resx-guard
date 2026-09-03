@@ -74,7 +74,7 @@ export interface ExtensionSettings {
   neutralLocale: string;
   keyNaming: 'pascalFromNeutral' | 'manual';
   updateDesignerCs: boolean;
-  /** Show inline naming Suggestion + Approve on PascalCase issues. Independent of `rules.keyPascalCase`. */
+  /** Show Apply next to PascalCase naming issues. Independent of `rules.keyPascalCase`. */
   namingSuggestions: boolean;
   visibleLocales: string[];
   rules: ValidationRulesConfig;

@@ -589,7 +589,7 @@ function issueCellClass(row: ResourceRow, locale?: string): string {
   return rule ? ` has-issue ${ruleClass(rule)}` : '';
 }
 
-function IssueIndicators({
+export function IssueIndicators({
   row,
   namingSuggestions,
   onApplyNaming,
@@ -607,25 +607,22 @@ function IssueIndicators({
     <div className="issue-chips">
       {rules.map((rule) => {
         const ofRule = row.issues.filter((i) => i.rule === rule);
-        const isSuggestion = rule === 'keyPascalCase' && suggestedKey;
-        return (
-          <IssueChip
-            key={rule}
-            rule={rule}
-            issues={ofRule}
-            count={ofRule.length}
-            action={
-              isSuggestion
-                ? {
-                    label: suggestedKey,
-                    title: t('issue.naming.apply', suggestedKey),
-                    onClick: () => onApplyNaming(suggestedKey),
-                  }
-                : undefined
-            }
-          />
-        );
+        return <IssueChip key={rule} rule={rule} issues={ofRule} count={ofRule.length} />;
       })}
+      {suggestedKey ? (
+        <button
+          type="button"
+          className="issue-apply-chip"
+          title={t('issue.naming.apply', suggestedKey)}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onApplyNaming(suggestedKey);
+          }}
+        >
+          {t('issue.naming.applyShort')}
+        </button>
+      ) : null}
     </div>
   );
 }
