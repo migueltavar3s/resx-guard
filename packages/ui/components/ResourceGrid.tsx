@@ -21,6 +21,7 @@ import {
 } from '../utils/issueMeta';
 import { autosizeTextarea, estimateRowHeight } from '../utils/rowSize';
 import { usePersistedSet } from '../hooks/usePersistedSet';
+import { revealFocusLocale } from '../utils/revealRow';
 
 const NEUTRAL = '';
 
@@ -63,6 +64,9 @@ interface Props {
   onUpdateCell: (familyId: string, key: string, locale: string, value: string) => void;
   onRenameKey: (familyId: string, oldKey: string, newKey: string) => void;
   namingSuggestions?: boolean;
+  familyLabel: (familyId: string) => string;
+  reveal?: ResourceRow | null;
+  revealNonce?: number;
 }
 
 type FlatItem =
@@ -95,6 +99,8 @@ export function ResourceGrid({
   onUpdateCell,
   onRenameKey,
   namingSuggestions = true,
+  reveal = null,
+  revealNonce = 0,
 }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -281,6 +287,23 @@ export function ResourceGrid({
     [virtualizer]
   );
 
+  useLayoutEffect(() => {
+    if (!reveal || revealNonce === 0) {
+      return;
+    }
+    if (collapsedFamilies.has(reveal.familyId)) {
+      toggleFamilyFold(reveal.familyId);
+      return;
+    }
+    const index = flat.findIndex(
+      (item) => item.kind === 'row' && item.row.familyId === reveal.familyId && item.row.key === reveal.key
+    );
+    if (index < 0) {
+      return;
+    }
+    virtualizer.scrollToIndex(index, { align: 'center' });
+  }, [reveal, revealNonce, flat, collapsedFamilies, toggleFamilyFold, virtualizer]);
+
   const setKeyFilter = (key: string) => onFiltersChange({ ...filters, key });
   const setUsageFilter = (usage: string) => onFiltersChange({ ...filters, usage });
   const setIssueFilter = (issues: IssueFilter) => onFiltersChange({ ...filters, issues });
@@ -461,6 +484,16 @@ export function ResourceGrid({
                 onSelect={onSelect}
                 onUpdateCell={onUpdateCell}
                 onRenameKey={onRenameKey}
+                focusLocale={
+                  reveal && reveal.familyId === row.familyId && reveal.key === row.key
+                    ? revealFocusLocale(row, visible)
+                    : undefined
+                }
+                focusNonce={
+                  reveal && reveal.familyId === row.familyId && reveal.key === row.key
+                    ? revealNonce
+                    : 0
+                }
               />
             );
           })}
@@ -484,6 +517,8 @@ function GridDataRow({
   onSelect,
   onUpdateCell,
   onRenameKey,
+  focusLocale,
+  focusNonce,
 }: {
   index: number;
   virtualizer: { measureElement: (el: Element | null) => void };
@@ -497,6 +532,8 @@ function GridDataRow({
   onSelect: (row: ResourceRow) => void;
   onUpdateCell: (familyId: string, key: string, locale: string, value: string) => void;
   onRenameKey: (familyId: string, oldKey: string, newKey: string) => void;
+  focusLocale?: string;
+  focusNonce: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -516,6 +553,7 @@ function GridDataRow({
       ref={ref}
       data-index={index}
       className={`grid-row ${isSelected ? 'row-selected' : ''}`}
+      data-row-id={`${row.familyId}:${row.key}`}
       style={{
         ...style,
         display: 'grid',
@@ -570,6 +608,7 @@ function GridDataRow({
             <EditableText
               value={row.values[col.locale] ?? ''}
               columnWidth={col.width}
+              focusNonce={focusLocale === col.locale ? focusNonce : 0}
               onActivate={() => onSelect(row)}
               onCommit={(value) => {
                 if (value !== (row.values[col.locale] ?? '')) {
@@ -632,11 +671,13 @@ function EditableText({
   onCommit,
   onActivate,
   columnWidth,
+  focusNonce = 0,
 }: {
   value: string;
   onCommit: (v: string) => void;
   onActivate?: () => void;
   columnWidth?: number;
+  focusNonce?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const skipCommit = useRef(false);
@@ -663,6 +704,13 @@ function EditableText({
       autosizeTextarea(ref.current, ROW_H);
     }
   }, [display, columnWidth]);
+
+  useLayoutEffect(() => {
+    if (focusNonce > 0) {
+      ref.current?.focus();
+      ref.current?.select();
+    }
+  }, [focusNonce]);
 
   return (
     <textarea

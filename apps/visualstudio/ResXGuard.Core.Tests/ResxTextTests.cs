@@ -26,8 +26,9 @@ public sealed class ResxTextTests
     public void Rename_only_changes_the_name_attribute()
     {
         var next = ResxText.RenameResxKeyInXml(Sample, "Hello", "HelloWorld");
-        Assert.Equal(Sample.Replace("name=\"Hello\"", "name=\"HelloWorld\""), next);
+        Assert.Contains("name=\"HelloWorld\"", next);
         Assert.StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\"?>", next);
+        Assert.True(next.IndexOf("name=\"Bye\"", StringComparison.Ordinal) < next.IndexOf("name=\"HelloWorld\"", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -49,7 +50,20 @@ public sealed class ResxTextTests
         var text = Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
         Assert.Contains("\r\n", text);
         Assert.DoesNotContain("\n", text.Replace("\r\n", ""));
-        Assert.Equal(original.Replace("name=\"Hello\"", "name=\"HelloWorld\""), text);
+        Assert.Contains("name=\"HelloWorld\"", text);
+        Assert.True(text.IndexOf("name=\"Bye\"", StringComparison.Ordinal) < text.IndexOf("name=\"HelloWorld\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Add_and_rename_keep_data_entries_alphabetical()
+    {
+        var withAlpha = ResxText.AddResxEntryInXml(Sample, "Alpha", "A");
+        Assert.True(withAlpha.IndexOf("name=\"Alpha\"", StringComparison.Ordinal) < withAlpha.IndexOf("name=\"Bye\"", StringComparison.Ordinal));
+        Assert.True(withAlpha.IndexOf("name=\"Bye\"", StringComparison.Ordinal) < withAlpha.IndexOf("name=\"Hello\"", StringComparison.Ordinal));
+
+        var renamed = ResxText.RenameResxKeyInXml(withAlpha, "Alpha", "Zulu");
+        Assert.True(renamed.IndexOf("name=\"Bye\"", StringComparison.Ordinal) < renamed.IndexOf("name=\"Hello\"", StringComparison.Ordinal));
+        Assert.True(renamed.IndexOf("name=\"Hello\"", StringComparison.Ordinal) < renamed.IndexOf("name=\"Zulu\"", StringComparison.Ordinal));
     }
 }
 

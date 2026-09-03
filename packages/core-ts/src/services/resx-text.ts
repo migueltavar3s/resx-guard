@@ -162,12 +162,17 @@ function formatDataElement(
   return `${indent}<data name="${escapeXmlAttr(key)}" xml:space="preserve">${newline}${inner}<value>${escapeXmlText(value)}</value>${commentXml}${newline}${indent}</data>`;
 }
 
+export function compareResxKeys(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true }) || a.localeCompare(b);
+}
+
 export function renameResxKeyInXml(xml: string, oldKey: string, newKey: string): string {
   const block = findBlock(xml, oldKey);
   if (!block) {
     return xml;
   }
-  return replaceRange(xml, block.nameValueStart, block.nameValueEnd, escapeXmlAttr(newKey));
+  const next = replaceRange(xml, block.nameValueStart, block.nameValueEnd, escapeXmlAttr(newKey));
+  return sortResxDataEntries(next);
 }
 
 export function setResxValueInXml(xml: string, key: string, value: string, comment?: string): string {
@@ -238,7 +243,43 @@ function insertDataBlock(xml: string, key: string, value: string, comment?: stri
   const closeAt = rootCloseIndex(xml);
   const before = xml.slice(0, closeAt);
   const needsNl = before.endsWith('\n') ? '' : newline;
-  return `${before}${needsNl}${block}${newline}${xml.slice(closeAt)}`;
+  return sortResxDataEntries(`${before}${needsNl}${block}${newline}${xml.slice(closeAt)}`);
+}
+
+/** Reorder contiguous `<data>` entries A–Z. Schema and resheaders stay put. */
+export function sortResxDataEntries(xml: string): string {
+  const blocks = findRootDataBlocks(xml);
+  if (blocks.length < 2) {
+    return xml;
+  }
+  const spans = blocks.map((block) => {
+    const { start, end } = spanOfBlock(xml, block);
+    return { key: block.key, start, end, text: xml.slice(start, end) };
+  });
+  for (let i = 1; i < spans.length; i++) {
+    if (xml.slice(spans[i - 1].end, spans[i].start).trim() !== '') {
+      return xml;
+    }
+  }
+  const sorted = [...spans].sort((a, b) => compareResxKeys(a.key, b.key));
+  if (sorted.every((span, i) => span.key === spans[i].key)) {
+    return xml;
+  }
+  return xml.slice(0, spans[0].start) + sorted.map((span) => span.text).join('') + xml.slice(spans[spans.length - 1].end);
+}
+
+function spanOfBlock(xml: string, block: DataBlock): { start: number; end: number } {
+  let start = block.start;
+  let end = block.end;
+  while (start > 0 && (xml[start - 1] === ' ' || xml[start - 1] === '\t')) {
+    start--;
+  }
+  if (end < xml.length && xml[end] === '\r' && xml[end + 1] === '\n') {
+    end += 2;
+  } else if (end < xml.length && xml[end] === '\n') {
+    end += 1;
+  }
+  return { start, end };
 }
 
 export function addResxEntryInXml(xml: string, key: string, value: string, comment = ''): string {

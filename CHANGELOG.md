@@ -12,6 +12,10 @@
 
 ### File writing
 - `.resx` writes are surgical text edits so encoding, newline style, XML declaration, and surrounding markup stay intact
+- Adding or renaming a key keeps `<data>` entries in alphabetical order
+
+### Add resource
+- After adding a key the grid selects that row, scrolls to it, and focuses the first empty language cell
 
 ## 0.2.1
 

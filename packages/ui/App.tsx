@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ExtensionSettings,
   IndexSnapshot,
@@ -23,6 +23,7 @@ import { ExcelMenu } from './components/ExcelMenu';
 import { SummaryPanel } from './components/SummaryPanel';
 import { ResizeHandle } from './components/ResizeHandle';
 import { usePersistedLayout, PANEL_LIMITS, clampPanelWidth } from './hooks/usePersistedLayout';
+import { applySnapshotSelection, resolveAddedKey, type RevealTarget } from './utils/revealRow';
 
 type Tab = 'main' | 'settings' | 'about';
 
@@ -39,22 +40,22 @@ export function App() {
   const [pendingDelete, setPendingDelete] = useState(false);
   const [columnPickerOpen, setColumnPickerOpen] = useState(false);
   const [layout, patchLayout] = usePersistedLayout();
+  const pendingRevealRef = useRef<RevealTarget | null>(null);
+  const [revealNonce, setRevealNonce] = useState(0);
 
   useEffect(() => {
     const dispose = onHostMessage((msg) => {
       if (msg.type === 'snapshot') {
         setLanguage(msg.payload.language);
         setSnapshot(msg.payload);
-        setSelected((prev) => {
-          if (!prev) {
-            return null;
+        const reveal = pendingRevealRef.current;
+        setSelected((prev) => applySnapshotSelection(msg.payload.rows, prev, reveal));
+        if (reveal) {
+          pendingRevealRef.current = null;
+          if (rowExists(msg.payload.rows, reveal)) {
+            setRevealNonce((n) => n + 1);
           }
-          return (
-            msg.payload.rows.find(
-              (r) => r.familyId === prev.familyId && r.key === prev.key
-            ) ?? null
-          );
-        });
+        }
       }
     });
     post({ type: 'ready' });
@@ -364,6 +365,8 @@ export function App() {
                     post({ type: 'renameKey', familyId, oldKey, newKey })
                   }
                   namingSuggestions={snapshot.settings.namingSuggestions !== false}
+                  reveal={selected}
+                  revealNonce={revealNonce}
                 />
               </div>
 
@@ -435,6 +438,10 @@ export function App() {
           keyNaming={snapshot.settings.keyNaming}
           onCancel={() => setShowAdd(false)}
           onConfirm={(familyId, key, neutralValue) => {
+            const finalKey = resolveAddedKey(key, neutralValue, snapshot.settings.keyNaming);
+            pendingRevealRef.current = { familyId, key: finalKey };
+            setFilters(emptyColumnFilters());
+            setTab('main');
             post({ type: 'addEntry', familyId, key, neutralValue });
             setShowAdd(false);
           }}
@@ -442,6 +449,10 @@ export function App() {
       )}
     </div>
   );
+}
+
+function rowExists(rows: ResourceRow[], target: RevealTarget): boolean {
+  return rows.some((row) => row.familyId === target.familyId && row.key === target.key);
 }
 
 function shouldIgnoreRowDelete(active: HTMLElement): boolean {

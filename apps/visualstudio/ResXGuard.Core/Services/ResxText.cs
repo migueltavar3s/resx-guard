@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -31,11 +32,20 @@ public static class ResxText
     public static string EscapeXmlAttr(string value) =>
         EscapeXmlText(value).Replace("\"", "&quot;");
 
+    public static int CompareResxKeys(string a, string b)
+    {
+        var cmp = CompareInfo.InvariantInfo.Compare(
+            a,
+            b,
+            CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace);
+        return cmp != 0 ? cmp : string.CompareOrdinal(a, b);
+    }
+
     public static string RenameResxKeyInXml(string xml, string oldKey, string newKey)
     {
         var block = FindBlock(xml, oldKey);
         if (block == null) return xml;
-        return ReplaceRange(xml, block.NameValueStart, block.NameValueEnd, EscapeXmlAttr(newKey));
+        return SortResxDataEntries(ReplaceRange(xml, block.NameValueStart, block.NameValueEnd, EscapeXmlAttr(newKey)));
     }
 
     public static string SetResxValueInXml(string xml, string key, string value, string? comment = null)
@@ -114,7 +124,42 @@ public static class ResxText
         var closeAt = RootCloseIndex(xml);
         var before = xml.Substring(0, closeAt);
         var needsNl = before.EndsWith("\n", StringComparison.Ordinal) ? "" : newline;
-        return before + needsNl + block + newline + xml.Substring(closeAt);
+        return SortResxDataEntries(before + needsNl + block + newline + xml.Substring(closeAt));
+    }
+
+    public static string SortResxDataEntries(string xml)
+    {
+        var blocks = FindRootDataBlocks(xml);
+        if (blocks.Count < 2) return xml;
+        var spans = blocks.Select(block =>
+        {
+            var (start, end) = SpanOfBlock(xml, block);
+            return (block.Key, start, end, text: xml.Substring(start, end - start));
+        }).ToList();
+        for (var i = 1; i < spans.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(xml.Substring(spans[i - 1].end, spans[i].start - spans[i - 1].end)))
+                return xml;
+        }
+        var sorted = spans.OrderBy(s => s.Key, Comparer<string>.Create(CompareResxKeys)).ToList();
+        if (sorted.Select((s, i) => s.Key == spans[i].Key).All(eq => eq))
+            return xml;
+        return xml.Substring(0, spans[0].start)
+               + string.Concat(sorted.Select(s => s.text))
+               + xml.Substring(spans[^1].end);
+    }
+
+    private static (int start, int end) SpanOfBlock(string xml, DataBlock block)
+    {
+        var start = block.Start;
+        var end = block.End;
+        while (start > 0 && (xml[start - 1] == ' ' || xml[start - 1] == '\t'))
+            start--;
+        if (end < xml.Length - 1 && xml[end] == '\r' && xml[end + 1] == '\n')
+            end += 2;
+        else if (end < xml.Length && xml[end] == '\n')
+            end += 1;
+        return (start, end);
     }
 
     private sealed class DataBlock

@@ -141,7 +141,28 @@ describe('resx parser', () => {
     expect(text.startsWith('<?xml version="1.0" encoding="utf-8"?>')).toBe(true);
     expect(text.includes('\r\n')).toBe(true);
     expect(text.includes('\n') && !text.replace(/\r\n/g, '').includes('\n')).toBe(true);
-    expect(text).toBe(original.replace('name="Hello"', 'name="HelloWorld"'));
+    expect(text).toContain('name="HelloWorld"');
+    expect(text).toContain('name="Bye"');
+    const parsed = parseResxXml(text, filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Bye', 'HelloWorld']);
+  });
+
+  it('adds and renames keys so <data> entries stay alphabetical', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'resx-guard-sort-'));
+    const filePath = path.join(dir, 'Resources.resx');
+    await fs.writeFile(filePath, SAMPLE, 'utf8');
+
+    await addResxEntry(filePath, 'Alpha', 'A');
+    let parsed = parseResxXml(await fs.readFile(filePath, 'utf8'), filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Alpha', 'Bye', 'Hello']);
+
+    await addResxEntry(filePath, 'Middle', 'M');
+    parsed = parseResxXml(await fs.readFile(filePath, 'utf8'), filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Alpha', 'Bye', 'Hello', 'Middle']);
+
+    await renameResxKey(filePath, 'Alpha', 'Zulu');
+    parsed = parseResxXml(await fs.readFile(filePath, 'utf8'), filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Bye', 'Hello', 'Middle', 'Zulu']);
   });
 });
 
