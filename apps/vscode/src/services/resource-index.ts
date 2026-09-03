@@ -32,6 +32,8 @@ import {
   parseWorkbook,
   remapImportedLocales,
   resolveFamilyForImport,
+  UsageIndex,
+  isUsageSourcePath,
   type ExcelWorkbookPayload,
 } from '@resx-guard/core-ts';
 
@@ -48,6 +50,7 @@ export class ResourceIndex {
   private onDidChangeEmitter = new vscode.EventEmitter<void>();
   readonly onDidChange = this.onDidChangeEmitter.event;
   private updatingFromUs = false;
+  private readonly usageIndex = new UsageIndex();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -82,6 +85,7 @@ export class ResourceIndex {
     }
     this.rebuildRowsAndValidate();
     this.onDidChangeEmitter.fire();
+    void this.scanUsageWorkspace();
   }
 
   async fullScan(): Promise<void> {
@@ -228,6 +232,10 @@ export class ResourceIndex {
     if (partial.updateDesignerCs !== undefined) {
       void config.update('updateDesignerCs', partial.updateDesignerCs, vscode.ConfigurationTarget.Workspace);
       this.settings.updateDesignerCs = partial.updateDesignerCs;
+    }
+    if (partial.namingSuggestions !== undefined) {
+      void config.update('namingSuggestions', partial.namingSuggestions, vscode.ConfigurationTarget.Workspace);
+      this.settings.namingSuggestions = partial.namingSuggestions;
     }
     if (partial.rules) {
       const rules = { ...this.settings.rules, ...partial.rules };
@@ -623,9 +631,86 @@ export class ResourceIndex {
       allRows.push(...attachIssuesToRows(rows, issues));
     }
 
-    this.rows = allRows;
+    this.rows = allRows.map((row) => ({
+      ...row,
+      usageCount: this.usageIndex.count(row.key),
+    }));
     this.issues = allIssues;
     this.publishDiagnostics();
+  }
+
+  async scanUsageWorkspace(): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    this.usageIndex.clear();
+    if (folders.length === 0) {
+      this.applyUsageCounts();
+      this.onDidChangeEmitter.fire();
+      return;
+    }
+
+    const uris: vscode.Uri[] = [];
+    for (const folder of folders) {
+      const found = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(
+          folder,
+          '**/*.{cs,cshtml,razor,vb,js,jsx,ts,tsx,html,aspx,ascx,master,vue}'
+        ),
+        '{**/node_modules/**,**/bin/**,**/obj/**,**/.git/**,**/.vs/**,**/*.Designer.cs}'
+      );
+      uris.push(...found);
+    }
+
+    await Promise.all(
+      uris.map(async (uri) => {
+        if (!isUsageSourcePath(uri.fsPath)) {
+          return;
+        }
+        try {
+          const bytes = await vscode.workspace.fs.readFile(uri);
+          this.usageIndex.indexFile(uri.fsPath, Buffer.from(bytes).toString('utf8'));
+        } catch {
+          /* unreadable */
+        }
+      })
+    );
+    this.applyUsageCounts();
+    this.onDidChangeEmitter.fire();
+  }
+
+  async refreshUsageFile(filePath: string): Promise<void> {
+    if (!isUsageSourcePath(filePath)) {
+      return;
+    }
+    try {
+      const bytes = await vscode.workspace.fs.readFile(vscode.Uri.file(filePath));
+      this.usageIndex.indexFile(filePath, Buffer.from(bytes).toString('utf8'));
+    } catch {
+      this.usageIndex.removeFile(filePath);
+    }
+    this.applyUsageCounts();
+    this.onDidChangeEmitter.fire();
+  }
+
+  refreshUsageText(filePath: string, text: string): void {
+    if (!isUsageSourcePath(filePath)) {
+      return;
+    }
+    this.usageIndex.indexFile(filePath, text);
+    this.applyUsageCounts();
+    this.onDidChangeEmitter.fire();
+  }
+
+  removeUsageFile(filePath: string): void {
+    this.usageIndex.removeFile(filePath);
+    this.applyUsageCounts();
+    this.onDidChangeEmitter.fire();
+  }
+
+  private applyUsageCounts(): void {
+    this.rows = this.rows.map((row) => ({
+      ...row,
+      usageCount: this.usageIndex.count(row.key),
+    }));
   }
 
   private publishDiagnostics(): void {
@@ -700,6 +785,7 @@ export class ResourceIndex {
       neutralLocale: config.get<string>('neutralLocale', ''),
       keyNaming: config.get<'pascalFromNeutral' | 'manual'>('keyNaming', 'pascalFromNeutral'),
       updateDesignerCs: config.get<boolean>('updateDesignerCs', true),
+      namingSuggestions: config.get<boolean>('namingSuggestions', true),
       visibleLocales: config.get<string[]>('visibleLocales', []),
       rules: {
         keyPascalCase: config.get<boolean>('rules.keyPascalCase', true),

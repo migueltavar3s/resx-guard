@@ -1,8 +1,15 @@
-import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
+import { DOMParser } from '@xmldom/xmldom';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { ResxEntry, ResxFile } from '../models/types';
 import { resolveResxIdentity } from './naming';
+import {
+  addResxEntryInXml,
+  deleteResxEntryInXml,
+  renameResxKeyInXml,
+  setResxCommentInXml,
+  setResxValueInXml,
+} from './resx-text';
 
 /** xmldom nodes are structurally DOM-like but conflict with lib.dom typings. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,13 +48,6 @@ function textContent(el: XNode): string {
   };
   walk(el);
   return text;
-}
-
-function setTextContent(doc: XNode, el: XNode, value: string): void {
-  while (el.firstChild) {
-    el.removeChild(el.firstChild);
-  }
-  el.appendChild(doc.createTextNode(value));
 }
 
 function findChild(el: XNode, localName: string): XNode {
@@ -114,9 +114,13 @@ export function createEmptyResxXml(): string {
 
 export type ResxEncoding = 'utf8' | 'utf16le';
 
-export function detectAndDecodeResx(buffer: Buffer): { text: string; encoding: ResxEncoding } {
+export function detectAndDecodeResx(buffer: Buffer): {
+  text: string;
+  encoding: ResxEncoding;
+  bom: boolean;
+} {
   if (buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe) {
-    return { text: buffer.subarray(2).toString('utf16le'), encoding: 'utf16le' };
+    return { text: buffer.subarray(2).toString('utf16le'), encoding: 'utf16le', bom: true };
   }
   if (buffer.length >= 2 && buffer[0] === 0xfe && buffer[1] === 0xff) {
     const le = Buffer.alloc(buffer.length - 2);
@@ -124,15 +128,15 @@ export function detectAndDecodeResx(buffer: Buffer): { text: string; encoding: R
       le[i - 2] = buffer[i + 1];
       le[i - 1] = buffer[i];
     }
-    return { text: le.toString('utf16le'), encoding: 'utf16le' };
+    return { text: le.toString('utf16le'), encoding: 'utf16le', bom: true };
   }
   if (buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
-    return { text: buffer.subarray(3).toString('utf8'), encoding: 'utf8' };
+    return { text: buffer.subarray(3).toString('utf8'), encoding: 'utf8', bom: true };
   }
   if (looksLikeUtf16Le(buffer)) {
-    return { text: buffer.toString('utf16le'), encoding: 'utf16le' };
+    return { text: buffer.toString('utf16le'), encoding: 'utf16le', bom: false };
   }
-  return { text: buffer.toString('utf8'), encoding: 'utf8' };
+  return { text: buffer.toString('utf8'), encoding: 'utf8', bom: false };
 }
 
 function looksLikeUtf16Le(buffer: Buffer): boolean {
@@ -149,20 +153,54 @@ function looksLikeUtf16Le(buffer: Buffer): boolean {
   return zerosOnOdd > sample / 4;
 }
 
-async function readResxText(filePath: string): Promise<{ text: string; encoding: ResxEncoding }> {
+async function readResxText(
+  filePath: string
+): Promise<{ text: string; encoding: ResxEncoding; bom: boolean }> {
   const buffer = await fs.readFile(filePath);
   return detectAndDecodeResx(buffer);
 }
 
-async function writeResxText(filePath: string, xml: string, encoding: ResxEncoding): Promise<void> {
+async function writeResxText(
+  filePath: string,
+  xml: string,
+  encoding: ResxEncoding,
+  bom: boolean
+): Promise<void> {
   if (encoding === 'utf16le') {
+    const body = Buffer.from(xml, 'utf16le');
+    await fs.writeFile(filePath, bom ? Buffer.concat([Buffer.from([0xff, 0xfe]), body]) : body);
+    return;
+  }
+  if (bom) {
     await fs.writeFile(
       filePath,
-      Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, 'utf16le')])
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(xml, 'utf8')])
     );
     return;
   }
   await fs.writeFile(filePath, xml, 'utf8');
+}
+
+async function loadOrCreateXml(
+  filePath: string
+): Promise<{ text: string; encoding: ResxEncoding; bom: boolean }> {
+  try {
+    return await readResxText(filePath);
+  } catch {
+    const xml = createEmptyResxXml();
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await writeResxText(filePath, xml, 'utf8', false);
+    return { text: xml, encoding: 'utf8', bom: false };
+  }
+}
+
+async function mutateResxXml(filePath: string, mutate: (xml: string) => string): Promise<void> {
+  const loaded = await loadOrCreateXml(filePath);
+  const next = mutate(loaded.text);
+  if (next === loaded.text) {
+    return;
+  }
+  await writeResxText(filePath, next, loaded.encoding, loaded.bom);
 }
 
 export async function parseResxFile(filePath: string): Promise<ResxFile> {
@@ -206,107 +244,17 @@ export function parseResxXml(xml: string, filePath: string): ResxFile {
   return { path: filePath, locale, entries, duplicateKeys };
 }
 
-async function loadOrCreateDoc(
-  filePath: string
-): Promise<{ doc: XNode; encoding: ResxEncoding }> {
-  let xml: string;
-  let encoding: ResxEncoding = 'utf8';
-  try {
-    const decoded = await readResxText(filePath);
-    xml = decoded.text;
-    encoding = decoded.encoding;
-  } catch {
-    xml = createEmptyResxXml();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, xml, 'utf8');
-  }
-  return { doc: new DOMParser().parseFromString(xml, 'text/xml'), encoding };
-}
-
-function serialize(doc: XNode): string {
-  return new XMLSerializer().serializeToString(doc);
-}
-
-function ensureRoot(doc: XNode): XNode {
-  let root = doc.documentElement;
-  if (!root) {
-    root = doc.createElement('root');
-    doc.appendChild(root);
-  }
-  return root;
-}
-
-function findDataElement(root: XNode, key: string): XNode {
-  let found: XNode = null;
-  forEachRootData(root, (data) => {
-    if (!found && data.getAttribute('name') === key) {
-      found = data;
-    }
-  });
-  return found;
-}
-
-function createDataElement(doc: XNode, key: string, value: string, comment?: string): XNode {
-  const data = doc.createElement('data');
-  data.setAttribute('name', key);
-  data.setAttribute('xml:space', 'preserve');
-  const valueEl = doc.createElement('value');
-  setTextContent(doc, valueEl, value);
-  data.appendChild(valueEl);
-  if (comment) {
-    const commentEl = doc.createElement('comment');
-    setTextContent(doc, commentEl, comment);
-    data.appendChild(commentEl);
-  }
-  return data;
-}
-
 export async function setResxValue(
   filePath: string,
   key: string,
   value: string,
   comment?: string
 ): Promise<void> {
-  const { doc, encoding } = await loadOrCreateDoc(filePath);
-  const root = ensureRoot(doc);
-  let data = findDataElement(root, key);
-  if (!data) {
-    data = createDataElement(doc, key, value, comment);
-    root.appendChild(doc.createTextNode('\n  '));
-    root.appendChild(data);
-  } else {
-    let valueEl = findChild(data, 'value');
-    if (!valueEl) {
-      valueEl = doc.createElement('value');
-      data.appendChild(valueEl);
-    }
-    setTextContent(doc, valueEl, value);
-    if (comment !== undefined) {
-      let commentEl = findChild(data, 'comment');
-      if (!commentEl) {
-        commentEl = doc.createElement('comment');
-        data.appendChild(commentEl);
-      }
-      setTextContent(doc, commentEl, comment);
-    }
-  }
-  await writeResxText(filePath, serialize(doc), encoding);
+  await mutateResxXml(filePath, (xml) => setResxValueInXml(xml, key, value, comment));
 }
 
 export async function setResxComment(filePath: string, key: string, comment: string): Promise<void> {
-  const { doc, encoding } = await loadOrCreateDoc(filePath);
-  const root = ensureRoot(doc);
-  const data = findDataElement(root, key);
-  if (!data) {
-    return;
-  }
-  let commentEl = findChild(data, 'comment');
-  if (!commentEl) {
-    commentEl = doc.createElement('comment');
-    data.appendChild(commentEl);
-  }
-  setTextContent(doc, commentEl, comment);
-  await writeResxText(filePath, serialize(doc), encoding);
+  await mutateResxXml(filePath, (xml) => setResxCommentInXml(xml, key, comment));
 }
 
 export async function addResxEntry(
@@ -315,18 +263,11 @@ export async function addResxEntry(
   value: string,
   comment = ''
 ): Promise<void> {
-  await setResxValue(filePath, key, value, comment);
+  await mutateResxXml(filePath, (xml) => addResxEntryInXml(xml, key, value, comment));
 }
 
 export async function deleteResxEntry(filePath: string, key: string): Promise<void> {
-  const { doc, encoding } = await loadOrCreateDoc(filePath);
-  const root = ensureRoot(doc);
-  const data = findDataElement(root, key);
-  if (!data) {
-    return;
-  }
-  root.removeChild(data);
-  await writeResxText(filePath, serialize(doc), encoding);
+  await mutateResxXml(filePath, (xml) => deleteResxEntryInXml(xml, key));
 }
 
 export async function renameResxKey(
@@ -334,14 +275,7 @@ export async function renameResxKey(
   oldKey: string,
   newKey: string
 ): Promise<void> {
-  const { doc, encoding } = await loadOrCreateDoc(filePath);
-  const root = ensureRoot(doc);
-  const data = findDataElement(root, oldKey);
-  if (!data) {
-    return;
-  }
-  data.setAttribute('name', newKey);
-  await writeResxText(filePath, serialize(doc), encoding);
+  await mutateResxXml(filePath, (xml) => renameResxKeyInXml(xml, oldKey, newKey));
 }
 
 export async function ensureResxFile(filePath: string): Promise<void> {

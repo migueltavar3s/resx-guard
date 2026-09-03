@@ -30,6 +30,7 @@ describe('hasActiveColumnFilters', () => {
     expect(hasActiveColumnFilters({ ...emptyColumnFilters(), issues: 'errors' })).toBe(true);
     expect(hasActiveColumnFilters({ ...emptyColumnFilters(), key: 'Save' })).toBe(true);
     expect(hasActiveColumnFilters({ ...emptyColumnFilters(), locales: { pt: 'olá' } })).toBe(true);
+    expect(hasActiveColumnFilters({ ...emptyColumnFilters(), usage: '0' })).toBe(true);
   });
 });
 
@@ -44,7 +45,7 @@ describe('ResourceGrid empty filters', () => {
         visibleLocales={['']}
         layout={DEFAULT_LAYOUT}
         onLayoutWidths={noop}
-        filters={{ key: '', issues: 'errors', locales: {} }}
+        filters={{ key: '', usage: '', issues: 'errors', locales: {} }}
         onFiltersChange={onFiltersChange}
         selected={null}
         onSelect={noop}
@@ -60,5 +61,30 @@ describe('ResourceGrid empty filters', () => {
 
     fireEvent.click(getByRole('button', { name: 'Clear filters' }));
     expect(onFiltersChange).toHaveBeenCalledWith(emptyColumnFilters());
+  });
+});
+
+describe('ResourceGrid suggestion and usage', () => {
+  it('shows a Usage column header next to Key', () => {
+    setLanguage('en');
+    const { getByText } = render(
+      <ResourceGrid
+        rows={[]}
+        allLocales={['']}
+        visibleLocales={['']}
+        layout={DEFAULT_LAYOUT}
+        onLayoutWidths={noop}
+        filters={emptyColumnFilters()}
+        onFiltersChange={noop}
+        selected={null}
+        onSelect={noop}
+        familyLabel={(id) => id}
+        onUpdateCell={noop}
+        onRenameKey={noop}
+      />
+    );
+
+    expect(getByText('Usage')).toBeTruthy();
+    expect(getByText('Key')).toBeTruthy();
   });
 });

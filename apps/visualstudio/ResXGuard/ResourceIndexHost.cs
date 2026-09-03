@@ -178,6 +178,8 @@ public sealed class ResourceIndexHost : IDisposable
     private readonly IWorkspaceService _workspace;
     private readonly IDiagnosticsService _diagnostics;
     private readonly ResxFileWatcher _fileWatcher;
+    private readonly SourceFileWatcher _sourceWatcher;
+    private readonly UsageIndex _usageIndex = new();
     private VsProjectDocumentsTracker? _docTracker;
     private System.Threading.Timer? _pollTimer;
     private string? _resxFingerprint;
@@ -191,6 +193,7 @@ public sealed class ResourceIndexHost : IDisposable
     private ExtensionSettings _settings = ValidationEngine.DefaultSettings();
     private List<ValidationIssue> _issues = new();
     private System.Threading.Timer? _rescanTimer;
+    private System.Threading.Timer? _usageTimer;
     private bool _updatingFromUs;
 
     public event EventHandler? Changed;
@@ -201,18 +204,22 @@ public sealed class ResourceIndexHost : IDisposable
         _workspace = new VsWorkspaceService();
         _diagnostics = new VsErrorListService();
         _fileWatcher = new ResxFileWatcher(ScheduleRescan);
+        _sourceWatcher = new SourceFileWatcher(ScheduleUsageFile, RemoveUsageFile);
     }
 
     public async Task InitializeAsync(CancellationToken ct)
     {
         await RefreshAsync(ct).ConfigureAwait(false);
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
-        _fileWatcher.UpdateWatchRoots(_workspace.GetWatchRoots());
+        var roots = _workspace.GetWatchRoots();
+        _fileWatcher.UpdateWatchRoots(roots);
+        _sourceWatcher.UpdateWatchRoots(roots);
         _resxFingerprint = await BuildFingerprintAsync(ct).ConfigureAwait(true);
-        _docTracker = new VsProjectDocumentsTracker(ScheduleRescan);
+        _docTracker = new VsProjectDocumentsTracker(ScheduleRescan, ScheduleUsageFile);
         _docTracker.Advise();
         StartResxPolling();
         WireSolutionEvents();
+        _ = Task.Run(() => ScanUsageFiles(roots));
     }
 
     private async Task<string> BuildFingerprintAsync(CancellationToken ct)
@@ -269,13 +276,18 @@ public sealed class ResourceIndexHost : IDisposable
 
     private void OnSolutionChanged()
     {
-        _fileWatcher.UpdateWatchRoots(_workspace.GetWatchRoots());
+        var roots = _workspace.GetWatchRoots();
+        _fileWatcher.UpdateWatchRoots(roots);
+        _sourceWatcher.UpdateWatchRoots(roots);
         ScheduleRescan();
+        _ = Task.Run(() => ScanUsageFiles(roots));
     }
 
     private void OnSolutionClosed()
     {
         _fileWatcher.UpdateWatchRoots(Array.Empty<string>());
+        _sourceWatcher.UpdateWatchRoots(Array.Empty<string>());
+        _usageIndex.Clear();
         _families.Clear();
         _rows.Clear();
         _tree.Clear();
@@ -314,7 +326,9 @@ public sealed class ResourceIndexHost : IDisposable
 
         ReconcileSelection(previousFamilyIds);
         RebuildRowsAndValidate();
-        _fileWatcher.UpdateWatchRoots(_workspace.GetWatchRoots());
+        var roots = _workspace.GetWatchRoots();
+        _fileWatcher.UpdateWatchRoots(roots);
+        _sourceWatcher.UpdateWatchRoots(roots);
         _resxFingerprint = string.Join("\n", files.OrderBy(f => f, StringComparer.OrdinalIgnoreCase));
         NotifyChanged();
     }
@@ -583,6 +597,9 @@ public sealed class ResourceIndexHost : IDisposable
         var updateDesigner = partial["updateDesignerCs"]?.Type == JTokenType.Boolean
             ? partial["updateDesignerCs"]!.Value<bool>()
             : _settings.UpdateDesignerCs;
+        var namingSuggestions = partial["namingSuggestions"]?.Type == JTokenType.Boolean
+            ? partial["namingSuggestions"]!.Value<bool>()
+            : _settings.NamingSuggestions;
         var rules = _settings.Rules;
         if (partial["rules"] is JObject rulesPatch)
         {
@@ -601,6 +618,7 @@ public sealed class ResourceIndexHost : IDisposable
             NeutralLocale = _settings.NeutralLocale,
             KeyNaming = keyNaming,
             UpdateDesignerCs = updateDesigner,
+            NamingSuggestions = namingSuggestions,
             VisibleLocales = _settings.VisibleLocales,
             Rules = rules,
         };
@@ -714,6 +732,8 @@ public sealed class ResourceIndexHost : IDisposable
             _issues.AddRange(issues);
             allRows.AddRange(ValidationEngine.AttachIssuesToRows(rows, issues));
         }
+        foreach (var row in allRows)
+            row.UsageCount = _usageIndex.Count(row.Key);
         _rows = allRows;
         CollectLocales();
         _diagnostics.Publish(_issues);
@@ -744,6 +764,86 @@ public sealed class ResourceIndexHost : IDisposable
         }, null, 180, Timeout.Infinite);
     }
 
+    private readonly HashSet<string> _pendingUsageFiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _usageGate = new();
+
+    private void ScheduleUsageFile(string path)
+    {
+        lock (_usageGate)
+            _pendingUsageFiles.Add(path);
+        _usageTimer?.Dispose();
+        _usageTimer = new System.Threading.Timer(_ =>
+        {
+            List<string> paths;
+            lock (_usageGate)
+            {
+                paths = _pendingUsageFiles.ToList();
+                _pendingUsageFiles.Clear();
+            }
+            try
+            {
+                foreach (var filePath in paths)
+                {
+                    if (File.Exists(filePath))
+                        _usageIndex.IndexFile(filePath, File.ReadAllText(filePath));
+                    else
+                        _usageIndex.RemoveFile(filePath);
+                }
+                ApplyUsageCounts();
+                NotifyChanged();
+            }
+            catch
+            {
+                // Skip unreadable files.
+            }
+        }, null, 180, Timeout.Infinite);
+    }
+
+    private void RemoveUsageFile(string path)
+    {
+        _usageIndex.RemoveFile(path);
+        ApplyUsageCounts();
+        NotifyChanged();
+    }
+
+    private void ApplyUsageCounts()
+    {
+        foreach (var row in _rows)
+            row.UsageCount = _usageIndex.Count(row.Key);
+    }
+
+    private void ScanUsageFiles(IEnumerable<string> roots)
+    {
+        _usageIndex.Clear();
+        foreach (var root in roots)
+        {
+            if (!Directory.Exists(root)) continue;
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories);
+            }
+            catch
+            {
+                continue;
+            }
+            foreach (var file in files)
+            {
+                if (!UsagePaths.IsUsageSourcePath(file)) continue;
+                try
+                {
+                    _usageIndex.IndexFile(file, File.ReadAllText(file));
+                }
+                catch
+                {
+                    // Skip unreadable files.
+                }
+            }
+        }
+        ApplyUsageCounts();
+        NotifyChanged();
+    }
+
     public void Dispose()
     {
         if (_solutionEvents != null)
@@ -754,6 +854,8 @@ public sealed class ResourceIndexHost : IDisposable
         _docTracker?.Dispose();
         _pollTimer?.Dispose();
         _rescanTimer?.Dispose();
+        _usageTimer?.Dispose();
         _fileWatcher.Dispose();
+        _sourceWatcher.Dispose();
     }
 }

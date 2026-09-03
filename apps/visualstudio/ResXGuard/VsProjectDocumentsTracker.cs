@@ -12,10 +12,15 @@ namespace ResXGuard;
 internal sealed class VsProjectDocumentsTracker : IVsTrackProjectDocumentsEvents2, IDisposable
 {
     private readonly Action _onResxChanged;
+    private readonly Action<string>? _onSourceFileChanged;
     private uint _cookie;
     private IVsTrackProjectDocuments2? _trackDocuments;
 
-    public VsProjectDocumentsTracker(Action onResxChanged) => _onResxChanged = onResxChanged;
+    public VsProjectDocumentsTracker(Action onResxChanged, Action<string>? onSourceFileChanged = null)
+    {
+        _onResxChanged = onResxChanged;
+        _onSourceFileChanged = onSourceFileChanged;
+    }
 
     public void Advise()
     {
@@ -59,6 +64,8 @@ internal sealed class VsProjectDocumentsTracker : IVsTrackProjectDocumentsEvents
     {
         if (ResxFileNames.IsResxFile(pszMkDocument))
             _onResxChanged();
+        else if (UsagePaths.IsUsageSourcePath(pszMkDocument))
+            _onSourceFileChanged?.Invoke(pszMkDocument);
         return VSConstants.S_OK;
     }
 
@@ -91,6 +98,8 @@ internal sealed class VsProjectDocumentsTracker : IVsTrackProjectDocumentsEvents
                 _onResxChanged();
                 return;
             }
+            if (UsagePaths.IsUsageSourcePath(path))
+                _onSourceFileChanged?.Invoke(path);
         }
     }
 }

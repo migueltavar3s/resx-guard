@@ -118,6 +118,11 @@
           "default": true,
           "description": "%resxGuard.config.updateDesignerCs%"
         },
+        "resxGuard.namingSuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "%resxGuard.config.namingSuggestions%"
+        },
         "resxGuard.visibleLocales": {
           "type": "array",
           "items": {

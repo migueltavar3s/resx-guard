@@ -679,6 +679,24 @@ select {
   font-weight: 500;
 }
 
+.grid-cell.usage {
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+}
+
+.usage-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.grid-cell.usage-zero .usage-count {
+  opacity: 0.35;
+  font-weight: 500;
+}
+
 .grid-row:nth-child(even) .grid-cell.key {
   background: color-mix(in srgb, var(--vscode-editor-background) 97%, rgba(128, 128, 128, 0.15));
 }
@@ -776,11 +794,16 @@ select {
   border-radius: 4px;
   font-size: 9px;
   font-weight: 600;
+  font-family: inherit;
   letter-spacing: 0.02em;
-  cursor: help;
+  cursor: default;
   border: 1px solid transparent;
   white-space: nowrap;
-  transition: transform 0.1s ease;
+  transition: transform 0.1s ease, filter 0.1s ease, box-shadow 0.1s ease;
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  line-height: 1.4;
 }
 
 .issue-chip:hover {
@@ -822,21 +845,40 @@ select {
   font-size: 8px;
 }
 
-.issue-apply-chip {
-  border: 1px solid var(--vscode-button-border, transparent);
-  background: var(--vscode-button-background, #0e639c);
-  color: var(--vscode-button-foreground, #fff);
-  border-radius: 4px;
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  padding: 1px 6px;
+.issue-chip--action {
   cursor: pointer;
-  line-height: 1.4;
+  gap: 5px;
+  padding: 1px 3px 1px 5px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--issue-accent, currentColor) 45%, transparent);
 }
 
-.issue-apply-chip:hover {
-  filter: brightness(1.08);
+.issue-chip--action:hover,
+.issue-chip--action:focus-visible {
+  transform: none;
+  filter: brightness(1.12);
+  box-shadow: inset 0 0 0 1px var(--issue-accent, currentColor);
+}
+
+.issue-chip-suggestion {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--issue-accent, var(--vscode-button-background, #0e639c));
+  color: var(--vscode-button-foreground, #fff);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.issue-tooltip-action {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.25));
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--issue-accent, inherit);
 }
 
 .issue-tooltip {

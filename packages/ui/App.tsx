@@ -133,6 +133,10 @@ export function App() {
       if (keyQ && !normalize(row.key).includes(keyQ)) {
         return false;
       }
+      const usageQ = filters.usage.trim();
+      if (usageQ && !String(row.usageCount ?? 0).includes(usageQ)) {
+        return false;
+      }
       for (const [locale, text] of Object.entries(filters.locales)) {
         const q = normalize(text.trim());
         if (q && !normalize(row.values[locale] ?? '').includes(q)) {
@@ -189,7 +193,7 @@ export function App() {
     } else {
       const remainingLocales = allLocales.filter((l) => l !== locale && set.has(l));
       const wouldHideAllData =
-        !layout.showKey && !layout.showIssues && remainingLocales.length === 0;
+        !layout.showKey && !layout.showUsage && !layout.showIssues && remainingLocales.length === 0;
       if (wouldHideAllData) {
         return;
       }
@@ -302,17 +306,24 @@ export function App() {
                   open={columnPickerOpen}
                   onClose={() => setColumnPickerOpen(false)}
                   showKey={layout.showKey}
+                  showUsage={layout.showUsage}
                   showIssues={layout.showIssues}
                   allLocales={allLocales}
                   visibleLocales={visibleLocales}
                   onToggleKey={(v) => {
-                    if (!v && !layout.showIssues && visibleLocales.length === 0) {
+                    if (!v && !layout.showUsage && !layout.showIssues && visibleLocales.length === 0) {
                       return;
                     }
                     patchLayout({ showKey: v });
                   }}
+                  onToggleUsage={(v) => {
+                    if (!v && !layout.showKey && !layout.showIssues && visibleLocales.length === 0) {
+                      return;
+                    }
+                    patchLayout({ showUsage: v });
+                  }}
                   onToggleIssues={(v) => {
-                    if (!v && !layout.showKey && visibleLocales.length === 0) {
+                    if (!v && !layout.showKey && !layout.showUsage && visibleLocales.length === 0) {
                       return;
                     }
                     patchLayout({ showIssues: v });
@@ -352,6 +363,7 @@ export function App() {
                   onRenameKey={(familyId, oldKey, newKey) =>
                     post({ type: 'renameKey', familyId, oldKey, newKey })
                   }
+                  namingSuggestions={snapshot.settings.namingSuggestions !== false}
                 />
               </div>
 
@@ -381,9 +393,6 @@ export function App() {
                     <SummaryPanel
                       row={selected}
                       locales={allLocales}
-                      onApplyNamingSuggestion={(familyId, oldKey, newKey) =>
-                        post({ type: 'renameKey', familyId, oldKey, newKey })
-                      }
                     />
                   </aside>
                 </>

@@ -1,5 +1,4 @@
 using System.Text;
-using System.Xml.Linq;
 
 namespace ResXGuard.Core;
 
@@ -7,9 +6,6 @@ public enum ResxEncoding { Utf8, Utf16Le }
 
 public static class ResxParser
 {
-    private static readonly XNamespace Xsd = "http://www.w3.org/2001/XMLSchema";
-    private static readonly XNamespace Msdata = "urn:schemas-microsoft-com:xml-msdata";
-
     public static string CreateEmptyResxXml() =>
         """
         <?xml version="1.0" encoding="utf-8"?>
@@ -33,15 +29,15 @@ public static class ResxParser
         </root>
         """;
 
-    public static (string Text, ResxEncoding Encoding) DetectAndDecodeResx(byte[] buffer)
+    public static (string Text, ResxEncoding Encoding, bool Bom) DetectAndDecodeResx(byte[] buffer)
     {
         if (buffer.Length >= 2 && buffer[0] == 0xff && buffer[1] == 0xfe)
-            return (Encoding.Unicode.GetString(buffer, 2, buffer.Length - 2), ResxEncoding.Utf16Le);
+            return (Encoding.Unicode.GetString(buffer, 2, buffer.Length - 2), ResxEncoding.Utf16Le, true);
         if (buffer.Length >= 3 && buffer[0] == 0xef && buffer[1] == 0xbb && buffer[2] == 0xbf)
-            return (Encoding.UTF8.GetString(buffer, 3, buffer.Length - 3), ResxEncoding.Utf8);
+            return (Encoding.UTF8.GetString(buffer, 3, buffer.Length - 3), ResxEncoding.Utf8, true);
         if (LooksLikeUtf16Le(buffer))
-            return (Encoding.Unicode.GetString(buffer), ResxEncoding.Utf16Le);
-        return (Encoding.UTF8.GetString(buffer), ResxEncoding.Utf8);
+            return (Encoding.Unicode.GetString(buffer), ResxEncoding.Utf16Le, false);
+        return (Encoding.UTF8.GetString(buffer), ResxEncoding.Utf8, false);
     }
 
     private static bool LooksLikeUtf16Le(byte[] buffer)
@@ -59,7 +55,7 @@ public static class ResxParser
         {
             ct.ThrowIfCancellationRequested();
             var buffer = File.ReadAllBytes(filePath);
-            var (text, _) = DetectAndDecodeResx(buffer);
+            var (text, _, _) = DetectAndDecodeResx(buffer);
             return ParseResxXml(text, filePath);
         }, ct);
 
@@ -123,120 +119,62 @@ public static class ResxParser
         return System.Text.RegularExpressions.Regex.IsMatch(typeName, @"^(System\.)?(String|Char)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
-    public static async Task SetResxValueAsync(string filePath, string key, string value, string? comment = null, CancellationToken ct = default)
-    {
-        var (doc, encoding) = await LoadOrCreateDocAsync(filePath, ct).ConfigureAwait(false);
-        var root = EnsureRoot(doc);
-        var data = FindDataElement(root, key);
-        if (data == null)
-        {
-            data = CreateDataElement(key, value, comment);
-            root.Add(new XText("\n  "));
-            root.Add(data);
-        }
-        else
-        {
-            var valueEl = data.Elements().FirstOrDefault(e => e.Name.LocalName == "value");
-            if (valueEl == null)
-            {
-                valueEl = new XElement("value", value);
-                data.Add(valueEl);
-            }
-            else valueEl.Value = value;
+    public static Task SetResxValueAsync(string filePath, string key, string value, string? comment = null, CancellationToken ct = default) =>
+        MutateResxXmlAsync(filePath, xml => ResxText.SetResxValueInXml(xml, key, value, comment), ct);
 
-            if (comment != null)
-            {
-                var commentEl = data.Elements().FirstOrDefault(e => e.Name.LocalName == "comment");
-                if (commentEl == null)
-                {
-                    commentEl = new XElement("comment", comment);
-                    data.Add(commentEl);
-                }
-                else commentEl.Value = comment;
-            }
-        }
-        await WriteResxTextAsync(filePath, doc.ToString(SaveOptions.DisableFormatting), encoding, ct).ConfigureAwait(false);
-    }
+    public static Task AddResxEntryAsync(string filePath, string key, string value, string comment = "", CancellationToken ct = default) =>
+        MutateResxXmlAsync(filePath, xml => ResxText.AddResxEntryInXml(xml, key, value, comment), ct);
 
-    public static async Task AddResxEntryAsync(string filePath, string key, string value, string comment = "", CancellationToken ct = default) =>
-        await SetResxValueAsync(filePath, key, value, comment, ct).ConfigureAwait(false);
+    public static Task DeleteResxEntryAsync(string filePath, string key, CancellationToken ct = default) =>
+        MutateResxXmlAsync(filePath, xml => ResxText.DeleteResxEntryInXml(xml, key), ct);
 
-    public static async Task DeleteResxEntryAsync(string filePath, string key, CancellationToken ct = default)
-    {
-        var (doc, encoding) = await LoadOrCreateDocAsync(filePath, ct).ConfigureAwait(false);
-        var root = EnsureRoot(doc);
-        var data = FindDataElement(root, key);
-        data?.Remove();
-        await WriteResxTextAsync(filePath, doc.ToString(SaveOptions.DisableFormatting), encoding, ct).ConfigureAwait(false);
-    }
+    public static Task RenameResxKeyAsync(string filePath, string oldKey, string newKey, CancellationToken ct = default) =>
+        MutateResxXmlAsync(filePath, xml => ResxText.RenameResxKeyInXml(xml, oldKey, newKey), ct);
 
-    public static async Task RenameResxKeyAsync(string filePath, string oldKey, string newKey, CancellationToken ct = default)
-    {
-        var (doc, encoding) = await LoadOrCreateDocAsync(filePath, ct).ConfigureAwait(false);
-        var root = EnsureRoot(doc);
-        var data = FindDataElement(root, oldKey);
-        data?.SetAttributeValue("name", newKey);
-        await WriteResxTextAsync(filePath, doc.ToString(SaveOptions.DisableFormatting), encoding, ct).ConfigureAwait(false);
-    }
-
-    private static Task<(XDocument Doc, ResxEncoding Encoding)> LoadOrCreateDocAsync(string filePath, CancellationToken ct) =>
+    private static Task MutateResxXmlAsync(string filePath, Func<string, string> mutate, CancellationToken ct) =>
         Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
-            try
-            {
-                var buffer = File.ReadAllBytes(filePath);
-                var (text, encoding) = DetectAndDecodeResx(buffer);
-                return (XDocument.Parse(text, LoadOptions.PreserveWhitespace), encoding);
-            }
-            catch
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-                var xml = CreateEmptyResxXml();
-                File.WriteAllText(filePath, xml, Encoding.UTF8);
-                return (XDocument.Parse(xml, LoadOptions.PreserveWhitespace), ResxEncoding.Utf8);
-            }
+            var loaded = LoadOrCreateXml(filePath);
+            var next = mutate(loaded.Text);
+            if (next == loaded.Text) return;
+            WriteResxText(filePath, next, loaded.Encoding, loaded.Bom);
         }, ct);
 
-    private static Task WriteResxTextAsync(string filePath, string xml, ResxEncoding encoding, CancellationToken ct) =>
-        Task.Run(() =>
+    private static (string Text, ResxEncoding Encoding, bool Bom) LoadOrCreateXml(string filePath)
+    {
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            if (encoding == ResxEncoding.Utf16Le)
+            var buffer = File.ReadAllBytes(filePath);
+            return DetectAndDecodeResx(buffer);
+        }
+        catch
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            var xml = CreateEmptyResxXml();
+            WriteResxText(filePath, xml, ResxEncoding.Utf8, false);
+            return (xml, ResxEncoding.Utf8, false);
+        }
+    }
+
+    private static void WriteResxText(string filePath, string xml, ResxEncoding encoding, bool bom)
+    {
+        if (encoding == ResxEncoding.Utf16Le)
+        {
+            var bytes = Encoding.Unicode.GetBytes(xml);
+            if (bom)
             {
-                var bytes = Encoding.Unicode.GetBytes(xml);
                 var withBom = new byte[bytes.Length + 2];
                 withBom[0] = 0xff;
                 withBom[1] = 0xfe;
                 Buffer.BlockCopy(bytes, 0, withBom, 2, bytes.Length);
                 File.WriteAllBytes(filePath, withBom);
             }
-            else
-            {
-                File.WriteAllText(filePath, xml, Encoding.UTF8);
-            }
-        }, ct);
-
-    private static XElement EnsureRoot(XDocument doc)
-    {
-        if (doc.Root == null)
-        {
-            doc.Add(new XElement("root"));
+            else File.WriteAllBytes(filePath, bytes);
+            return;
         }
-        return doc.Root!;
-    }
 
-    private static XElement? FindDataElement(XElement root, string key) =>
-        root.Elements().FirstOrDefault(e => e.Name.LocalName == "data" && e.Attribute("name")?.Value == key);
-
-    private static XElement CreateDataElement(string key, string value, string? comment)
-    {
-        var data = new XElement("data",
-            new XAttribute("name", key),
-            new XAttribute(XNamespace.Xml + "space", "preserve"),
-            new XElement("value", value));
-        if (!string.IsNullOrEmpty(comment))
-            data.Add(new XElement("comment", comment));
-        return data;
+        var utf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: bom);
+        File.WriteAllText(filePath, xml, utf8);
     }
 }

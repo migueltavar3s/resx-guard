@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Suggestions
+- Naming suggestion is a clickable chip (`Naming` + suggested key). Approve lives on that chip, not a separate button, and not in Summary
+- New **Show naming suggestions** setting (`namingSuggestions`), independent of the PascalCase validation rule
+- Issue chips no longer use the help (`?`) cursor
+
+### Usage Count
+- New Usage column after Key, with incremental per-file indexing of `.cs`, `.cshtml`, JS, and other source files
+
+### File writing
+- `.resx` writes are surgical text edits so encoding, newline style, XML declaration, and surrounding markup stay intact
+
 ## 0.2.1
 
 Internal sideload release (VS Code + Visual Studio). Not published to the Marketplace until this lands on `main`.

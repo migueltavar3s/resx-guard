@@ -122,6 +122,27 @@ describe('resx parser', () => {
     expect(parsed.entries).toHaveLength(1);
     expect(parsed.entries[0]?.value).toBe('Hello edited');
   });
+
+  it('rename keeps encoding, newlines, declaration and the rest of the XML', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'resx-guard-ws-'));
+    const filePath = path.join(dir, 'Resources.resx');
+    const original = vsStyleResx({
+      Hello: { value: 'Hello world', comment: 'greeting' },
+      Bye: { value: 'Goodbye' },
+    }).replace(/\n/g, '\r\n');
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    await fs.writeFile(filePath, Buffer.concat([bom, Buffer.from(original, 'utf8')]));
+
+    await renameResxKey(filePath, 'Hello', 'HelloWorld');
+
+    const saved = await fs.readFile(filePath);
+    expect(saved.subarray(0, 3).equals(bom)).toBe(true);
+    const text = saved.subarray(3).toString('utf8');
+    expect(text.startsWith('<?xml version="1.0" encoding="utf-8"?>')).toBe(true);
+    expect(text.includes('\r\n')).toBe(true);
+    expect(text.includes('\n') && !text.replace(/\r\n/g, '').includes('\n')).toBe(true);
+    expect(text).toBe(original.replace('name="Hello"', 'name="HelloWorld"'));
+  });
 });
 
 function vsStyleResx(
