@@ -12,20 +12,47 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  
-  
-  
-  <data name="WelcomeMessage" xml:space="preserve">
-    <value>Bem-vindo ao ResX Guard</value>
+  <data name="AddressLine" xml:space="preserve">
+    <value>Linha um
+Linha dois</value>
   </data>
-  <data name="ProjectHasNoResourceFile" xml:space="preserve">
-    <value>O projeto não tem ficheiro de recursos.</value>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Confirms" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="DeleteFile" xml:space="preserve">
+    <value>Eliminar ficheiro?</value>
+  </data>
+  <data name="ExportComplete" xml:space="preserve">
+    <value>Exportação concluída com sucesso.</value>
+  </data>
+  <data name="HelpHint" xml:space="preserve">
+    <value>Prima F1 para ajuda</value>
   </data>
   <data name="ImportFailedEror" xml:space="preserve">
     <value>Falha na importação: {0}</value>
   </data>
-  
-
-  
-  
-  <data name="Confirms" xml:space="preserve"><value>Confirm</value></data></root>
+  <data name="ItemsFound" xml:space="preserve">
+    <value>{0} itens encontrados</value>
+  </data>
+  <data name="ItemsFoundBad" xml:space="preserve">
+    <value>Encontrados itens</value>
+  </data>
+  <data name="LongKeyThatShouldNotBreakTheSummaryPanelLayoutWhenDisplayed" xml:space="preserve">
+    <value>Uma chave muito longa para testar o layout</value>
+  </data>
+  <data name="ProjectHasNoResourceFile" xml:space="preserve">
+    <value>O projeto não tem ficheiro de recursos.</value>
+  </data>
+  <data name="SaveChanges" xml:space="preserve">
+    <value>Guardar alterações</value>
+  </data>
+  <data name="untitled_key" xml:space="preserve">
+    <value>sem título</value>
+  </data>
+  <data name="WelcomeMessage" xml:space="preserve">
+    <value>Bem-vindo ao ResX Guard</value>
+  </data>
+</root>

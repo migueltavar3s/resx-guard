@@ -35,6 +35,33 @@ public sealed class ValidationEngineTests
     }
 
     [Fact]
+    public void Manual_key_naming_skips_pascal_case()
+    {
+        var family = new ResxFamily
+        {
+            Id = "f1",
+            BasePath = "/p/Resources.resx",
+            DisplayName = "Resources",
+            ProjectName = "Sample",
+            Files = new Dictionary<string, string> { [""] = "/p/Resources.resx" }
+        };
+        var files = new List<ResxFile>
+        {
+            new()
+            {
+                Path = "/p/Resources.resx",
+                Locale = "",
+                Entries = new List<ResxEntry> { new() { Key = "WrongKey", Value = "Save failed." } }
+            }
+        };
+
+        var rules = ValidationEngine.EffectiveRules(new ValidationRulesConfig(), "manual");
+        var issues = ValidationEngine.ValidateFamily(family, files, rules);
+
+        Assert.DoesNotContain(issues, i => i.Rule == IssueRule.KeyPascalCase);
+    }
+
+    [Fact]
     public void DuplicateKeys_are_errors()
     {
         var family = new ResxFamily

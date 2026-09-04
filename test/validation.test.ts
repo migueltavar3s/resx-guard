@@ -3,6 +3,7 @@ import * as path from 'path';
 import {
   attachIssuesToRows,
   buildRows,
+  effectiveValidationRules,
   validateFamily,
 } from '@resx-guard/core-ts';
 import type { ResxFamily, ResxFile } from '@resx-guard/core-ts';
@@ -63,6 +64,28 @@ describe('validation engine', () => {
     expect(naming?.severity).toBe('warning');
     expect(naming?.suggestedKey).toBe('SaveFailed');
     expect(issues.find((i) => i.rule === 'duplicateKeys')).toBeUndefined();
+  });
+
+  it('skips PascalCase naming issues when keys are typed manually', () => {
+    const files: ResxFile[] = [
+      {
+        path: '/p/Resources.resx',
+        locale: '',
+        duplicateKeys: [],
+        entries: [{ key: 'WrongKey', value: 'Save failed.', comment: '' }],
+      },
+    ];
+    const issues = validateFamily(
+      family(),
+      files,
+      effectiveValidationRules(rules, 'manual')
+    );
+    expect(issues.some((i) => i.rule === 'keyPascalCase')).toBe(false);
+    expect(
+      validateFamily(family(), files, effectiveValidationRules(rules, 'pascalFromNeutral')).some(
+        (i) => i.rule === 'keyPascalCase'
+      )
+    ).toBe(true);
   });
 
   it('builds rows and attaches issues', () => {

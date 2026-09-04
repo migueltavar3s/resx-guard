@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResxFamily, ResourceRow } from '@resx-guard/core-ts';
 import { t } from '../i18n';
 import { FilterSelect } from './FilterSelect';
@@ -55,9 +55,37 @@ export function AddEntryModal({ families, rows, keyNaming, onCancel, onConfirm }
 
   const canSubmit = Boolean(familyId && (effectiveKey.trim() || value.trim()) && !duplicate);
 
+  const submit = useCallback(() => {
+    if (!canSubmit) {
+      return;
+    }
+    onConfirm(familyId, effectiveKey.trim(), value);
+  }, [canSubmit, familyId, effectiveKey, value, onConfirm]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+        return;
+      }
+      if (e.key !== 'Enter' || e.shiftKey || e.isComposing) {
+        return;
+      }
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button') || target?.closest('.filter-select-menu')) {
+        return;
+      }
+      e.preventDefault();
+      submit();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel, submit]);
+
   return (
     <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <h3>{t('add.title')}</h3>
 
         {families.length > 1 && (
@@ -77,6 +105,13 @@ export function AddEntryModal({ families, rows, keyNaming, onCancel, onConfirm }
           rows={3}
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.stopPropagation();
+              submit();
+            }
+          }}
           autoFocus
         />
 
@@ -103,7 +138,7 @@ export function AddEntryModal({ families, rows, keyNaming, onCancel, onConfirm }
             type="button"
             className="btn primary"
             disabled={!canSubmit}
-            onClick={() => onConfirm(familyId, effectiveKey.trim(), value)}
+            onClick={submit}
           >
             {t('add.confirm')}
           </button>

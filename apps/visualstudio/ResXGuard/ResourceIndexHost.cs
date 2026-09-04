@@ -728,7 +728,10 @@ public sealed class ResourceIndexHost : IDisposable
                 .Select(path => GetFamilyFile(family, path))
                 .ToList();
             var rows = ValidationEngine.BuildRows(family, files);
-            var issues = ValidationEngine.ValidateFamily(family, files, _settings.Rules);
+            var issues = ValidationEngine.ValidateFamily(
+                family,
+                files,
+                ValidationEngine.EffectiveRules(_settings.Rules, _settings.KeyNaming));
             _issues.AddRange(issues);
             allRows.AddRange(ValidationEngine.AttachIssuesToRows(rows, issues));
         }

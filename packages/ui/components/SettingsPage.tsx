@@ -15,6 +15,9 @@ const RULES = [
 ] as const;
 
 export function SettingsPage({ settings, onChange }: Props) {
+  const pascalNaming = settings.keyNaming === 'pascalFromNeutral';
+  const visibleRules = pascalNaming ? RULES : RULES.filter((rule) => rule !== 'keyPascalCase');
+
   return (
     <div className="settings">
       <header className="settings-hero">
@@ -43,18 +46,20 @@ export function SettingsPage({ settings, onChange }: Props) {
             {t('settings.keyNaming.manual')}
           </button>
         </div>
-        <label className="toggle-row">
-          <span>
-            <span className="toggle-title">{t('settings.namingSuggestions')}</span>
-            <span className="toggle-hint">{t('settings.namingSuggestions.hint')}</span>
-          </span>
-          <input
-            type="checkbox"
-            checked={settings.namingSuggestions !== false}
-            onChange={(e) => onChange({ namingSuggestions: e.target.checked })}
-          />
-          <span className="toggle-track" aria-hidden />
-        </label>
+        {pascalNaming && (
+          <label className="toggle-row">
+            <span>
+              <span className="toggle-title">{t('settings.namingSuggestions')}</span>
+              <span className="toggle-hint">{t('settings.namingSuggestions.hint')}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.namingSuggestions !== false}
+              onChange={(e) => onChange({ namingSuggestions: e.target.checked })}
+            />
+            <span className="toggle-track" aria-hidden />
+          </label>
+        )}
       </section>
 
       <section className="setting-card">
@@ -78,7 +83,7 @@ export function SettingsPage({ settings, onChange }: Props) {
           <p>{t('settings.rules.hint')}</p>
         </div>
         <div className="setting-toggles">
-          {RULES.map((rule) => (
+          {visibleRules.map((rule) => (
             <label key={rule} className="toggle-row">
               <span>
                 <span className="toggle-title">{t(`settings.rules.${rule}`)}</span>

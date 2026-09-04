@@ -364,7 +364,10 @@ export function App() {
                   onRenameKey={(familyId, oldKey, newKey) =>
                     post({ type: 'renameKey', familyId, oldKey, newKey })
                   }
-                  namingSuggestions={snapshot.settings.namingSuggestions !== false}
+                  namingSuggestions={
+                    snapshot.settings.keyNaming === 'pascalFromNeutral' &&
+                    snapshot.settings.namingSuggestions !== false
+                  }
                   reveal={selected}
                   revealNonce={revealNonce}
                 />

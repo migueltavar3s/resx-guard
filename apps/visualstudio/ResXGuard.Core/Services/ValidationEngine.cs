@@ -2,6 +2,22 @@ namespace ResXGuard.Core;
 
 public static class ValidationEngine
 {
+    public static ValidationRulesConfig EffectiveRules(ValidationRulesConfig rules, string keyNaming)
+    {
+        if (string.Equals(keyNaming, "manual", StringComparison.Ordinal))
+        {
+            return new ValidationRulesConfig
+            {
+                KeyPascalCase = false,
+                MatchingSuffix = rules.MatchingSuffix,
+                Placeholders = rules.Placeholders,
+                MissingTranslation = rules.MissingTranslation,
+                DuplicateKeys = rules.DuplicateKeys
+            };
+        }
+        return rules;
+    }
+
     public static List<ValidationIssue> ValidateFamily(
         ResxFamily family,
         IReadOnlyList<ResxFile> files,

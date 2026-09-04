@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.2.2
+
+### Key naming
+- **Type the key myself** skips PascalCase naming warnings and revalidates the grid as soon as you switch
+- **Show naming suggestions** and the PascalCase validation rule only appear when key naming is PascalCase from English
 
 ### Suggestions
 - PascalCase naming issues keep a **Naming** chip plus a separate **Apply** button in the grid. Approve does not live in Summary
@@ -16,6 +20,7 @@
 
 ### Add resource
 - After adding a key the grid selects that row, scrolls to it, and focuses the first empty language cell
+- Enter creates the key; Shift+Enter inserts a new line in the neutral value
 
 ## 0.2.1
 

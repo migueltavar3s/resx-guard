@@ -13,6 +13,17 @@ import {
   toPascalCaseKey,
 } from './naming';
 
+/** PascalCase key checks only apply when keys are derived from the neutral value. */
+export function effectiveValidationRules(
+  rules: ValidationRulesConfig,
+  keyNaming: ExtensionSettings['keyNaming']
+): ValidationRulesConfig {
+  if (keyNaming === 'manual') {
+    return { ...rules, keyPascalCase: false };
+  }
+  return rules;
+}
+
 export function validateFamily(
   family: ResxFamily,
   files: ResxFile[],

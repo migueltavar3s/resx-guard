@@ -21,6 +21,7 @@ import {
   attachIssuesToRows,
   buildRows,
   defaultSettings,
+  effectiveValidationRules,
   validateFamily,
   buildDesignerEntries,
   resolveDesignerMeta,
@@ -245,11 +246,13 @@ export class ResourceIndex {
       void config.update('rules.placeholders', rules.placeholders, vscode.ConfigurationTarget.Workspace);
       void config.update('rules.missingTranslation', rules.missingTranslation, vscode.ConfigurationTarget.Workspace);
       void config.update('rules.duplicateKeys', rules.duplicateKeys, vscode.ConfigurationTarget.Workspace);
-      this.rebuildRowsAndValidate();
     }
     if (partial.visibleLocales) {
       this.setVisibleLocales(partial.visibleLocales);
       return;
+    }
+    if (partial.rules || partial.keyNaming !== undefined) {
+      this.rebuildRowsAndValidate();
     }
     this.onDidChangeEmitter.fire();
   }
@@ -626,7 +629,11 @@ export class ResourceIndex {
         });
       }
       const rows = buildRows(family, files);
-      const issues = validateFamily(family, files, this.settings.rules);
+      const issues = validateFamily(
+        family,
+        files,
+        effectiveValidationRules(this.settings.rules, this.settings.keyNaming)
+      );
       allIssues.push(...issues);
       allRows.push(...attachIssuesToRows(rows, issues));
     }
