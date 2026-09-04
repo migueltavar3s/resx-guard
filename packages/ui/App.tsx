@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ExtensionSettings,
   IndexSnapshot,
@@ -23,6 +23,7 @@ import { ExcelMenu } from './components/ExcelMenu';
 import { SummaryPanel } from './components/SummaryPanel';
 import { ResizeHandle } from './components/ResizeHandle';
 import { usePersistedLayout, PANEL_LIMITS, clampPanelWidth } from './hooks/usePersistedLayout';
+import { applySnapshotSelection, resolveAddedKey, type RevealTarget } from './utils/revealRow';
 
 type Tab = 'main' | 'settings' | 'about';
 
@@ -39,22 +40,22 @@ export function App() {
   const [pendingDelete, setPendingDelete] = useState(false);
   const [columnPickerOpen, setColumnPickerOpen] = useState(false);
   const [layout, patchLayout] = usePersistedLayout();
+  const pendingRevealRef = useRef<RevealTarget | null>(null);
+  const [revealNonce, setRevealNonce] = useState(0);
 
   useEffect(() => {
     const dispose = onHostMessage((msg) => {
       if (msg.type === 'snapshot') {
         setLanguage(msg.payload.language);
         setSnapshot(msg.payload);
-        setSelected((prev) => {
-          if (!prev) {
-            return null;
+        const reveal = pendingRevealRef.current;
+        setSelected((prev) => applySnapshotSelection(msg.payload.rows, prev, reveal));
+        if (reveal) {
+          pendingRevealRef.current = null;
+          if (rowExists(msg.payload.rows, reveal)) {
+            setRevealNonce((n) => n + 1);
           }
-          return (
-            msg.payload.rows.find(
-              (r) => r.familyId === prev.familyId && r.key === prev.key
-            ) ?? null
-          );
-        });
+        }
       }
     });
     post({ type: 'ready' });
@@ -133,6 +134,10 @@ export function App() {
       if (keyQ && !normalize(row.key).includes(keyQ)) {
         return false;
       }
+      const usageQ = filters.usage.trim();
+      if (usageQ && !String(row.usageCount ?? 0).includes(usageQ)) {
+        return false;
+      }
       for (const [locale, text] of Object.entries(filters.locales)) {
         const q = normalize(text.trim());
         if (q && !normalize(row.values[locale] ?? '').includes(q)) {
@@ -189,7 +194,7 @@ export function App() {
     } else {
       const remainingLocales = allLocales.filter((l) => l !== locale && set.has(l));
       const wouldHideAllData =
-        !layout.showKey && !layout.showIssues && remainingLocales.length === 0;
+        !layout.showKey && !layout.showUsage && !layout.showIssues && remainingLocales.length === 0;
       if (wouldHideAllData) {
         return;
       }
@@ -302,17 +307,24 @@ export function App() {
                   open={columnPickerOpen}
                   onClose={() => setColumnPickerOpen(false)}
                   showKey={layout.showKey}
+                  showUsage={layout.showUsage}
                   showIssues={layout.showIssues}
                   allLocales={allLocales}
                   visibleLocales={visibleLocales}
                   onToggleKey={(v) => {
-                    if (!v && !layout.showIssues && visibleLocales.length === 0) {
+                    if (!v && !layout.showUsage && !layout.showIssues && visibleLocales.length === 0) {
                       return;
                     }
                     patchLayout({ showKey: v });
                   }}
+                  onToggleUsage={(v) => {
+                    if (!v && !layout.showKey && !layout.showIssues && visibleLocales.length === 0) {
+                      return;
+                    }
+                    patchLayout({ showUsage: v });
+                  }}
                   onToggleIssues={(v) => {
-                    if (!v && !layout.showKey && visibleLocales.length === 0) {
+                    if (!v && !layout.showKey && !layout.showUsage && visibleLocales.length === 0) {
                       return;
                     }
                     patchLayout({ showIssues: v });
@@ -352,6 +364,9 @@ export function App() {
                   onRenameKey={(familyId, oldKey, newKey) =>
                     post({ type: 'renameKey', familyId, oldKey, newKey })
                   }
+                  namingSuggestions={snapshot.settings.namingSuggestions !== false}
+                  reveal={selected}
+                  revealNonce={revealNonce}
                 />
               </div>
 
@@ -381,9 +396,6 @@ export function App() {
                     <SummaryPanel
                       row={selected}
                       locales={allLocales}
-                      onApplyNamingSuggestion={(familyId, oldKey, newKey) =>
-                        post({ type: 'renameKey', familyId, oldKey, newKey })
-                      }
                     />
                   </aside>
                 </>
@@ -426,6 +438,10 @@ export function App() {
           keyNaming={snapshot.settings.keyNaming}
           onCancel={() => setShowAdd(false)}
           onConfirm={(familyId, key, neutralValue) => {
+            const finalKey = resolveAddedKey(key, neutralValue, snapshot.settings.keyNaming);
+            pendingRevealRef.current = { familyId, key: finalKey };
+            setFilters(emptyColumnFilters());
+            setTab('main');
             post({ type: 'addEntry', familyId, key, neutralValue });
             setShowAdd(false);
           }}
@@ -433,6 +449,10 @@ export function App() {
       )}
     </div>
   );
+}
+
+function rowExists(rows: ResourceRow[], target: RevealTarget): boolean {
+  return rows.some((row) => row.familyId === target.familyId && row.key === target.key);
 }
 
 function shouldIgnoreRowDelete(active: HTMLElement): boolean {

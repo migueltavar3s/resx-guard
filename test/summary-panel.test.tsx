@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render } from '@testing-library/react';
 import type { ResourceRow } from '@resx-guard/core-ts';
 import { SummaryPanel } from '../packages/ui/components/SummaryPanel';
 import { setLanguage } from '../packages/ui/i18n';
@@ -39,9 +39,8 @@ describe('SummaryPanel issue overflow markup', () => {
 });
 
 describe('SummaryPanel naming apply', () => {
-  it('renames to the suggested key from a naming warning', () => {
+  it('does not put a rename action in the Summary', () => {
     setLanguage('en');
-    const onApply = vi.fn();
     const namingRow: ResourceRow = {
       familyId: 'fam',
       key: 'WrongKey',
@@ -59,13 +58,12 @@ describe('SummaryPanel naming apply', () => {
       ],
     };
 
-    const { getByRole, container } = render(
-      <SummaryPanel row={namingRow} locales={['']} onApplyNamingSuggestion={onApply} />
+    const { queryByRole, container } = render(
+      <SummaryPanel row={namingRow} locales={['']} />
     );
 
     expect(container.querySelector('.issue-item-severity')?.textContent).toBe('Warning');
-    fireEvent.click(getByRole('button', { name: 'Rename to SaveFailed' }));
-    expect(onApply).toHaveBeenCalledWith('fam', 'WrongKey', 'SaveFailed');
+    expect(queryByRole('button', { name: /Rename to/ })).toBeNull();
   });
 
   it('explains warning vs issue in the Summary', () => {

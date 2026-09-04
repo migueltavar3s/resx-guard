@@ -58,6 +58,8 @@ export interface ResourceRow {
   /** locale → value */
   values: Record<string, string>;
   issues: ValidationIssue[];
+  /** How many times this key appears in project source files. */
+  usageCount?: number;
 }
 
 export interface ValidationRulesConfig {
@@ -72,6 +74,8 @@ export interface ExtensionSettings {
   neutralLocale: string;
   keyNaming: 'pascalFromNeutral' | 'manual';
   updateDesignerCs: boolean;
+  /** Show Apply next to PascalCase naming issues. Independent of `rules.keyPascalCase`. */
+  namingSuggestions: boolean;
   visibleLocales: string[];
   rules: ValidationRulesConfig;
 }

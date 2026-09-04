@@ -7,14 +7,13 @@ const NEUTRAL = '';
 interface Props {
   row: ResourceRow | null;
   locales: string[];
-  onApplyNamingSuggestion?: (familyId: string, oldKey: string, newKey: string) => void;
 }
 
 function localeLabel(locale: string): string {
   return locale === NEUTRAL || locale === '' ? t('column.neutral') : locale;
 }
 
-export function SummaryPanel({ row, locales, onApplyNamingSuggestion }: Props) {
+export function SummaryPanel({ row, locales }: Props) {
   return (
     <div className="summary-body">
       {!row ? (
@@ -69,17 +68,6 @@ export function SummaryPanel({ row, locales, onApplyNamingSuggestion }: Props) {
                       </div>
                     </div>
                     <div className="issue-item-message">{issue.message}</div>
-                    {issue.rule === 'keyPascalCase' && issue.suggestedKey ? (
-                      <button
-                        type="button"
-                        className="btn issue-apply-btn"
-                        onClick={() =>
-                          onApplyNamingSuggestion?.(row.familyId, row.key, issue.suggestedKey!)
-                        }
-                      >
-                        {t('issue.naming.apply', issue.suggestedKey)}
-                      </button>
-                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -42,6 +42,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const watcher = vscode.workspace.createFileSystemWatcher('**/*.resx');
   context.subscriptions.push(watcher);
 
+  const usageWatcher = vscode.workspace.createFileSystemWatcher(
+    '**/*.{cs,cshtml,razor,vb,js,jsx,ts,tsx,html,aspx,ascx,master,vue}'
+  );
+  context.subscriptions.push(usageWatcher);
+
+  let usageTimer: ReturnType<typeof setTimeout> | undefined;
+  const pendingUsage = new Set<string>();
+  const scheduleUsageFile = (filePath: string) => {
+    pendingUsage.add(filePath);
+    if (usageTimer) {
+      clearTimeout(usageTimer);
+    }
+    usageTimer = setTimeout(() => {
+      const paths = [...pendingUsage];
+      pendingUsage.clear();
+      for (const p of paths) {
+        void index?.refreshUsageFile(p);
+      }
+    }, 180);
+  };
+
   let rescanTimer: ReturnType<typeof setTimeout> | undefined;
   const scheduleRescan = () => {
     if (rescanTimer) {
@@ -69,6 +90,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     scheduleRescan();
   });
 
+  usageWatcher.onDidChange((uri) => scheduleUsageFile(uri.fsPath));
+  usageWatcher.onDidCreate((uri) => scheduleUsageFile(uri.fsPath));
+  usageWatcher.onDidDelete((uri) => index?.removeUsageFile(uri.fsPath));
+
+  const pendingUsageText = new Map<string, string>();
+  let usageTextTimer: ReturnType<typeof setTimeout> | undefined;
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      if (e.document.uri.scheme !== 'file') {
+        return;
+      }
+      pendingUsageText.set(e.document.uri.fsPath, e.document.getText());
+      if (usageTextTimer) {
+        clearTimeout(usageTextTimer);
+      }
+      usageTextTimer = setTimeout(() => {
+        const entries = [...pendingUsageText.entries()];
+        pendingUsageText.clear();
+        for (const [filePath, text] of entries) {
+          index?.refreshUsageText(filePath, text);
+        }
+      }, 180);
+    })
+  );
+
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('resxGuard')) {
@@ -81,6 +127,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       void refresh();
+      void index?.scanUsageWorkspace();
     })
   );
 

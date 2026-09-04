@@ -7,3 +7,5 @@ export * from './services/validation-engine';
 export * from './services/designer-generator';
 export * from './services/excel-io';
 export * from './services/locale-columns';
+export * from './services/resx-text';
+export * from './services/usage-index';

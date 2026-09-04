@@ -4,9 +4,11 @@ const STORAGE_KEY = 'resxGuard.gridLayout.v4';
 
 export interface GridLayout {
   showKey: boolean;
+  showUsage: boolean;
   showIssues: boolean;
   widths: {
     key: number;
+    usage: number;
     issues: number;
     locales: Record<string, number>;
   };
@@ -17,10 +19,12 @@ export interface GridLayout {
 
 export const DEFAULT_LAYOUT: GridLayout = {
   showKey: true,
+  showUsage: true,
   showIssues: true,
   widths: {
     key: 180,
-    issues: 92,
+    usage: 72,
+    issues: 132,
     locales: {},
   },
   summaryOpen: false,
@@ -38,9 +42,11 @@ function loadLayout(): GridLayout {
     return {
       ...DEFAULT_LAYOUT,
       ...parsed,
+      showUsage: parsed.showUsage ?? true,
       widths: {
         ...DEFAULT_LAYOUT.widths,
         ...(parsed.widths ?? {}),
+        usage: parsed.widths?.usage ?? DEFAULT_LAYOUT.widths.usage,
         locales: { ...DEFAULT_LAYOUT.widths.locales, ...(parsed.widths?.locales ?? {}) },
       },
     };
@@ -70,6 +76,7 @@ export function usePersistedLayout(): [
             ? {
                 ...prev.widths,
                 ...next.widths,
+                usage: next.widths.usage ?? prev.widths.usage,
                 locales: { ...prev.widths.locales, ...(next.widths.locales ?? {}) },
               }
             : prev.widths,
@@ -93,7 +100,8 @@ export function clampPanelWidth(width: number, min: number, max: number): number
 
 export const COLUMN_MIN = {
   key: 110,
-  issues: 72,
+  usage: 56,
+  issues: 88,
   locale: 140,
 } as const;
 
@@ -101,7 +109,7 @@ export function localeWidth(layout: GridLayout, locale: string): number {
   return layout.widths.locales[locale] ?? 220;
 }
 
-export function columnMin(kind: 'key' | 'issues' | 'locale'): number {
+export function columnMin(kind: 'key' | 'usage' | 'issues' | 'locale'): number {
   return COLUMN_MIN[kind];
 }
 

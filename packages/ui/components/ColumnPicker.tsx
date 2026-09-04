@@ -7,10 +7,12 @@ interface Props {
   open: boolean;
   onClose: () => void;
   showKey: boolean;
+  showUsage: boolean;
   showIssues: boolean;
   allLocales: string[];
   visibleLocales: string[];
   onToggleKey: (v: boolean) => void;
+  onToggleUsage: (v: boolean) => void;
   onToggleIssues: (v: boolean) => void;
   onToggleLocale: (locale: string, visible: boolean) => void;
 }
@@ -23,10 +25,12 @@ export function ColumnPicker({
   open,
   onClose,
   showKey,
+  showUsage,
   showIssues,
   allLocales,
   visibleLocales,
   onToggleKey,
+  onToggleUsage,
   onToggleIssues,
   onToggleLocale,
 }: Props) {
@@ -56,6 +60,14 @@ export function ColumnPicker({
       <label className="column-picker-row">
         <input type="checkbox" checked={showKey} onChange={(e) => onToggleKey(e.target.checked)} />
         <span>{t('column.key')}</span>
+      </label>
+      <label className="column-picker-row">
+        <input
+          type="checkbox"
+          checked={showUsage}
+          onChange={(e) => onToggleUsage(e.target.checked)}
+        />
+        <span>{t('column.usage')}</span>
       </label>
       <label className="column-picker-row">
         <input

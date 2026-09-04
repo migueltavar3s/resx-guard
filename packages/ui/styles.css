@@ -679,6 +679,24 @@ select {
   font-weight: 500;
 }
 
+.grid-cell.usage {
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+}
+
+.usage-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.grid-cell.usage-zero .usage-count {
+  opacity: 0.35;
+  font-weight: 500;
+}
+
 .grid-row:nth-child(even) .grid-cell.key {
   background: color-mix(in srgb, var(--vscode-editor-background) 97%, rgba(128, 128, 128, 0.15));
 }
@@ -776,11 +794,16 @@ select {
   border-radius: 4px;
   font-size: 9px;
   font-weight: 600;
+  font-family: inherit;
   letter-spacing: 0.02em;
-  cursor: help;
+  cursor: default;
   border: 1px solid transparent;
   white-space: nowrap;
-  transition: transform 0.1s ease;
+  transition: transform 0.1s ease, filter 0.1s ease, box-shadow 0.1s ease;
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  line-height: 1.4;
 }
 
 .issue-chip:hover {
@@ -1273,6 +1296,12 @@ select {
   background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
   font-weight: 600;
+}
+
+.setting-card .segmented + .toggle-row {
+  margin-top: 4px;
+  padding-bottom: 0;
+  border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.18));
 }
 
 .setting-toggles {

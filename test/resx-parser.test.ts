@@ -122,6 +122,48 @@ describe('resx parser', () => {
     expect(parsed.entries).toHaveLength(1);
     expect(parsed.entries[0]?.value).toBe('Hello edited');
   });
+
+  it('rename keeps encoding, newlines, declaration and the rest of the XML', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'resx-guard-ws-'));
+    const filePath = path.join(dir, 'Resources.resx');
+    const original = vsStyleResx({
+      Hello: { value: 'Hello world', comment: 'greeting' },
+      Bye: { value: 'Goodbye' },
+    }).replace(/\n/g, '\r\n');
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    await fs.writeFile(filePath, Buffer.concat([bom, Buffer.from(original, 'utf8')]));
+
+    await renameResxKey(filePath, 'Hello', 'HelloWorld');
+
+    const saved = await fs.readFile(filePath);
+    expect(saved.subarray(0, 3).equals(bom)).toBe(true);
+    const text = saved.subarray(3).toString('utf8');
+    expect(text.startsWith('<?xml version="1.0" encoding="utf-8"?>')).toBe(true);
+    expect(text.includes('\r\n')).toBe(true);
+    expect(text.includes('\n') && !text.replace(/\r\n/g, '').includes('\n')).toBe(true);
+    expect(text).toContain('name="HelloWorld"');
+    expect(text).toContain('name="Bye"');
+    const parsed = parseResxXml(text, filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Bye', 'HelloWorld']);
+  });
+
+  it('adds and renames keys so <data> entries stay alphabetical', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'resx-guard-sort-'));
+    const filePath = path.join(dir, 'Resources.resx');
+    await fs.writeFile(filePath, SAMPLE, 'utf8');
+
+    await addResxEntry(filePath, 'Alpha', 'A');
+    let parsed = parseResxXml(await fs.readFile(filePath, 'utf8'), filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Alpha', 'Bye', 'Hello']);
+
+    await addResxEntry(filePath, 'Middle', 'M');
+    parsed = parseResxXml(await fs.readFile(filePath, 'utf8'), filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Alpha', 'Bye', 'Hello', 'Middle']);
+
+    await renameResxKey(filePath, 'Alpha', 'Zulu');
+    parsed = parseResxXml(await fs.readFile(filePath, 'utf8'), filePath);
+    expect(parsed.entries.map((e) => e.key)).toEqual(['Bye', 'Hello', 'Middle', 'Zulu']);
+  });
 });
 
 function vsStyleResx(

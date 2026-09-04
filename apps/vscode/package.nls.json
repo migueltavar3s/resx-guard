@@ -5,6 +5,7 @@
   "resxGuard.config.neutralLocale": "Neutral/base locale label (empty = uncultured .resx)",
   "resxGuard.config.keyNaming": "How resource keys are suggested from the neutral value",
   "resxGuard.config.updateDesignerCs": "Automatically update Resources.Designer.cs when keys change",
+  "resxGuard.config.namingSuggestions": "Show an Apply action in the grid when a key is not PascalCase of the neutral value. Independent of the PascalCase validation rule.",
   "resxGuard.config.visibleLocales": "Locales shown as grid columns (empty = all)",
   "resxGuard.config.rules.keyPascalCase": "Warn when key is not PascalCase of the neutral English value",
   "resxGuard.config.rules.matchingSuffix": "Warn when translations do not end like the neutral string",

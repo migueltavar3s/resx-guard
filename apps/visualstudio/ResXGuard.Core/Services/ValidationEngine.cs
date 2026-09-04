@@ -141,7 +141,8 @@ public static class ValidationEngine
             Key = row.Key,
             Comment = row.Comment,
             Values = new Dictionary<string, string>(row.Values),
-            Issues = byKey.TryGetValue($"{row.FamilyId}::{row.Key}", out var list) ? list : new List<ValidationIssue>()
+            Issues = byKey.TryGetValue($"{row.FamilyId}::{row.Key}", out var list) ? list : new List<ValidationIssue>(),
+            UsageCount = row.UsageCount
         }).ToList();
     }
 
@@ -182,6 +183,7 @@ public static class ValidationEngine
         NeutralLocale = "",
         KeyNaming = "pascalFromNeutral",
         UpdateDesignerCs = true,
+        NamingSuggestions = true,
         VisibleLocales = new List<string>(),
         Rules = new ValidationRulesConfig()
     };

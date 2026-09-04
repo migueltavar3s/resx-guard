@@ -58,6 +58,7 @@ public sealed class ResourceRow
     public string Comment { get; init; } = "";
     public Dictionary<string, string> Values { get; init; } = new();
     public List<ValidationIssue> Issues { get; init; } = new();
+    public int UsageCount { get; set; }
 }
 
 public sealed class ValidationRulesConfig
@@ -74,6 +75,7 @@ public sealed class ExtensionSettings
     public string NeutralLocale { get; init; } = "";
     public string KeyNaming { get; init; } = "pascalFromNeutral";
     public bool UpdateDesignerCs { get; init; } = true;
+    public bool NamingSuggestions { get; init; } = true;
     public List<string> VisibleLocales { get; init; } = new();
     public ValidationRulesConfig Rules { get; init; } = new();
 }

@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Suggestions
+- PascalCase naming issues keep a **Naming** chip plus a separate **Apply** button in the grid. Approve does not live in Summary
+- **Show naming suggestions** (`namingSuggestions`) lives in the Key naming settings card, independent of the PascalCase validation rule
+- Issue chips no longer use the help (`?`) cursor
+
+### Usage Count
+- New Usage column after Key, with incremental per-file indexing of `.cs`, `.cshtml`, JS, and other source files
+
+### File writing
+- `.resx` writes are surgical text edits so encoding, newline style, XML declaration, and surrounding markup stay intact
+- Adding or renaming a key keeps `<data>` entries in alphabetical order
+
+### Add resource
+- After adding a key the grid selects that row, scrolls to it, and focuses the first empty language cell
+
 ## 0.2.1
 
 Internal sideload release (VS Code + Visual Studio). Not published to the Marketplace until this lands on `main`.

@@ -21,6 +21,7 @@ import {
 } from '../utils/issueMeta';
 import { autosizeTextarea, estimateRowHeight } from '../utils/rowSize';
 import { usePersistedSet } from '../hooks/usePersistedSet';
+import { revealFocusLocale } from '../utils/revealRow';
 
 const NEUTRAL = '';
 
@@ -28,12 +29,13 @@ export type IssueFilter = 'all' | 'any' | 'warnings' | 'errors';
 
 export interface ColumnFilters {
   key: string;
+  usage: string;
   issues: IssueFilter;
   locales: Record<string, string>;
 }
 
 export function emptyColumnFilters(): ColumnFilters {
-  return { key: '', issues: 'all', locales: {} };
+  return { key: '', usage: '', issues: 'all', locales: {} };
 }
 
 export function hasActiveColumnFilters(filters: ColumnFilters): boolean {
@@ -41,6 +43,9 @@ export function hasActiveColumnFilters(filters: ColumnFilters): boolean {
     return true;
   }
   if (filters.key.trim().length > 0) {
+    return true;
+  }
+  if (filters.usage.trim().length > 0) {
     return true;
   }
   return Object.values(filters.locales).some((value) => value.trim().length > 0);
@@ -56,9 +61,12 @@ interface Props {
   onFiltersChange: (filters: ColumnFilters) => void;
   selected: ResourceRow | null;
   onSelect: (row: ResourceRow) => void;
-  familyLabel: (familyId: string) => string;
   onUpdateCell: (familyId: string, key: string, locale: string, value: string) => void;
   onRenameKey: (familyId: string, oldKey: string, newKey: string) => void;
+  namingSuggestions?: boolean;
+  familyLabel: (familyId: string) => string;
+  reveal?: ResourceRow | null;
+  revealNonce?: number;
 }
 
 type FlatItem =
@@ -67,6 +75,7 @@ type FlatItem =
 
 type ColumnDef =
   | { id: 'key'; kind: 'key'; width: number }
+  | { id: 'usage'; kind: 'usage'; width: number }
   | { id: 'issues'; kind: 'issues'; width: number }
   | { id: string; kind: 'locale'; locale: string; width: number };
 
@@ -89,6 +98,9 @@ export function ResourceGrid({
   familyLabel,
   onUpdateCell,
   onRenameKey,
+  namingSuggestions = true,
+  reveal = null,
+  revealNonce = 0,
 }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -114,6 +126,9 @@ export function ResourceGrid({
     const cols: ColumnDef[] = [];
     if (layout.showKey) {
       cols.push({ id: 'key', kind: 'key', width: layout.widths.key });
+    }
+    if (layout.showUsage) {
+      cols.push({ id: 'usage', kind: 'usage', width: layout.widths.usage });
     }
     if (layout.showIssues) {
       cols.push({ id: 'issues', kind: 'issues', width: layout.widths.issues });
@@ -148,17 +163,20 @@ export function ResourceGrid({
     (next: ColumnDef[]) => {
       const locales: Record<string, number> = { ...layout.widths.locales };
       let key = layout.widths.key;
+      let usage = layout.widths.usage;
       let issues = layout.widths.issues;
       for (const col of next) {
         if (col.kind === 'key') {
           key = col.width;
+        } else if (col.kind === 'usage') {
+          usage = col.width;
         } else if (col.kind === 'issues') {
           issues = col.width;
         } else {
           locales[col.locale] = col.width;
         }
       }
-      onLayoutWidths({ key, issues, locales });
+      onLayoutWidths({ key, usage, issues, locales });
     },
     [layout.widths, onLayoutWidths]
   );
@@ -237,6 +255,9 @@ export function ResourceGrid({
         if (col.kind === 'key') {
           return item.row.key;
         }
+        if (col.kind === 'usage') {
+          return String(item.row.usageCount ?? 0);
+        }
         if (col.kind === 'issues') {
           return item.row.issues.map((issue) => issue.rule).join(' ');
         }
@@ -266,7 +287,25 @@ export function ResourceGrid({
     [virtualizer]
   );
 
+  useLayoutEffect(() => {
+    if (!reveal || revealNonce === 0) {
+      return;
+    }
+    if (collapsedFamilies.has(reveal.familyId)) {
+      toggleFamilyFold(reveal.familyId);
+      return;
+    }
+    const index = flat.findIndex(
+      (item) => item.kind === 'row' && item.row.familyId === reveal.familyId && item.row.key === reveal.key
+    );
+    if (index < 0) {
+      return;
+    }
+    virtualizer.scrollToIndex(index, { align: 'center' });
+  }, [reveal, revealNonce, flat, collapsedFamilies, toggleFamilyFold, virtualizer]);
+
   const setKeyFilter = (key: string) => onFiltersChange({ ...filters, key });
+  const setUsageFilter = (usage: string) => onFiltersChange({ ...filters, usage });
   const setIssueFilter = (issues: IssueFilter) => onFiltersChange({ ...filters, issues });
   const setLocaleFilter = (locale: string, value: string) =>
     onFiltersChange({
@@ -292,6 +331,19 @@ export function ResourceGrid({
           placeholder={t('filter.column')}
           value={filters.key}
           onChange={(e) => setKeyFilter(e.target.value)}
+        />
+      );
+    }
+    if (col.kind === 'usage') {
+      return rowKind === 'title' ? (
+        <span title={t('column.usage.hint')}>{t('column.usage')}</span>
+      ) : (
+        <input
+          className="col-filter"
+          type="search"
+          placeholder={t('filter.column')}
+          value={filters.usage}
+          onChange={(e) => setUsageFilter(e.target.value)}
         />
       );
     }
@@ -428,9 +480,20 @@ export function ResourceGrid({
                 gridCols={gridCols}
                 columns={columns}
                 colWidths={colWidths}
+                namingSuggestions={namingSuggestions}
                 onSelect={onSelect}
                 onUpdateCell={onUpdateCell}
                 onRenameKey={onRenameKey}
+                focusLocale={
+                  reveal && reveal.familyId === row.familyId && reveal.key === row.key
+                    ? revealFocusLocale(row, visible)
+                    : undefined
+                }
+                focusNonce={
+                  reveal && reveal.familyId === row.familyId && reveal.key === row.key
+                    ? revealNonce
+                    : 0
+                }
               />
             );
           })}
@@ -450,9 +513,12 @@ function GridDataRow({
   gridCols,
   columns,
   colWidths,
+  namingSuggestions,
   onSelect,
   onUpdateCell,
   onRenameKey,
+  focusLocale,
+  focusNonce,
 }: {
   index: number;
   virtualizer: { measureElement: (el: Element | null) => void };
@@ -462,9 +528,12 @@ function GridDataRow({
   gridCols: string;
   columns: ColumnDef[];
   colWidths: number[];
+  namingSuggestions: boolean;
   onSelect: (row: ResourceRow) => void;
   onUpdateCell: (familyId: string, key: string, locale: string, value: string) => void;
   onRenameKey: (familyId: string, oldKey: string, newKey: string) => void;
+  focusLocale?: string;
+  focusNonce: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -484,6 +553,7 @@ function GridDataRow({
       ref={ref}
       data-index={index}
       className={`grid-row ${isSelected ? 'row-selected' : ''}`}
+      data-row-id={`${row.familyId}:${row.key}`}
       style={{
         ...style,
         display: 'grid',
@@ -509,11 +579,20 @@ function GridDataRow({
             </div>
           );
         }
+        if (col.kind === 'usage') {
+          const count = row.usageCount ?? 0;
+          return (
+            <div key={col.id} className={`grid-cell usage${count === 0 ? ' usage-zero' : ''}`}>
+              <span className="usage-count">{count}</span>
+            </div>
+          );
+        }
         if (col.kind === 'issues') {
           return (
             <div key={col.id} className="grid-cell issues">
               <IssueIndicators
                 row={row}
+                namingSuggestions={namingSuggestions}
                 onApplyNaming={(suggestedKey) =>
                   onRenameKey(row.familyId, row.key, suggestedKey)
                 }
@@ -529,6 +608,7 @@ function GridDataRow({
             <EditableText
               value={row.values[col.locale] ?? ''}
               columnWidth={col.width}
+              focusNonce={focusLocale === col.locale ? focusNonce : 0}
               onActivate={() => onSelect(row)}
               onCommit={(value) => {
                 if (value !== (row.values[col.locale] ?? '')) {
@@ -548,18 +628,20 @@ function issueCellClass(row: ResourceRow, locale?: string): string {
   return rule ? ` has-issue ${ruleClass(rule)}` : '';
 }
 
-function IssueIndicators({
+export function IssueIndicators({
   row,
+  namingSuggestions,
   onApplyNaming,
 }: {
   row: ResourceRow;
+  namingSuggestions: boolean;
   onApplyNaming: (suggestedKey: string) => void;
 }) {
   if (row.issues.length === 0) {
     return <span className="issue-empty" aria-hidden>—</span>;
   }
   const rules = uniqueRules(row.issues);
-  const suggestedKey = namingSuggestedKey(row.issues);
+  const suggestedKey = namingSuggestions ? namingSuggestedKey(row.issues) : undefined;
   return (
     <div className="issue-chips">
       {rules.map((rule) => {
@@ -589,11 +671,13 @@ function EditableText({
   onCommit,
   onActivate,
   columnWidth,
+  focusNonce = 0,
 }: {
   value: string;
   onCommit: (v: string) => void;
   onActivate?: () => void;
   columnWidth?: number;
+  focusNonce?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const skipCommit = useRef(false);
@@ -620,6 +704,13 @@ function EditableText({
       autosizeTextarea(ref.current, ROW_H);
     }
   }, [display, columnWidth]);
+
+  useLayoutEffect(() => {
+    if (focusNonce > 0) {
+      ref.current?.focus();
+      ref.current?.select();
+    }
+  }, [focusNonce]);
 
   return (
     <textarea

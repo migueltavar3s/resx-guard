@@ -194,6 +194,7 @@ export function defaultSettings(): ExtensionSettings {
     neutralLocale: '',
     keyNaming: 'pascalFromNeutral',
     updateDesignerCs: true,
+    namingSuggestions: true,
     visibleLocales: [],
     rules: {
       keyPascalCase: true,
