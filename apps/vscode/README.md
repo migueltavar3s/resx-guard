@@ -22,6 +22,19 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 - Import/export Excel (`.xlsx` / `.xls`) for the selected families
 - UI in **English** and **Portuguese**
 
+## Additional Support for JSON (i18n)
+
+While ResX Guard is primarily designed as a core tool for C# `.resx` XML files, it also offers **additional support** for nested JSON translation files (commonly used in web frontend workflows).
+
+**Considerations and Limitations:**
+- **File Structure Requirement:** JSON files must be located directly inside a folder named after a valid language locale code (e.g., `locales/en/translation.json`, `locales/pt/translation.json`).
+- **Namespacing:** The filename (e.g., `translation`) acts as the resource namespace family.
+- **Flattened Keys:** Nested JSON objects are automatically flattened into dot-notation keys (e.g., `navigation.dashboard`) for grid editing, and correctly unflattened back to deeply nested JSON upon saving.
+- **Comments:** Standard JSON does not support comments, so the comment field is disabled when editing these files.
+- **File Types:** The workspace scanner looks for both `.json` and `.i18n` file extensions inside valid locale folders.
+
+*Note: This is provided as a quality-of-life feature to bridge frontend web translations and C# backend `.resx` workflows in the same editor, but it is not intended to support all arbitrary i18n JSON structures.*
+
 ## Usage
 
 1. Open a workspace or solution that contains `.resx` files

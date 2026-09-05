@@ -9,3 +9,5 @@ export * from './services/excel-io';
 export * from './services/locale-columns';
 export * from './services/resx-text';
 export * from './services/usage-index';
+export * from './services/i18n-parser';
+export * from './services/i18n-writer';
