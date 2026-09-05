@@ -37,6 +37,19 @@ export function resolveResxIdentity(filePath: string, allNormalizedPaths?: Set<s
   const slash = normalized.lastIndexOf('/');
   const fileName = slash >= 0 ? normalized.slice(slash + 1) : normalized;
   const dir = slash >= 0 ? normalized.slice(0, slash) : '';
+  
+  if (fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.i18n')) {
+    const extLen = fileName.toLowerCase().endsWith('.json') ? 5 : 5;
+    const base = fileName.slice(0, -extLen);
+    const parentName = dir.slice(dir.lastIndexOf('/') + 1);
+    const parentCulture = canonicalizeCulture(parentName);
+    
+    if (parentCulture) {
+      const familyDir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
+      return { locale: parentCulture, baseName: base, familyDir };
+    }
+  }
+
   const base = fileName.replace(/\.resx$/i, '');
 
   const suffix = cultureFromResourceBase(base, dir, allNormalizedPaths);

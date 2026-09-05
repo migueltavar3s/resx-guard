@@ -11,10 +11,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   index = new ResourceIndex(context, diagnostics);
   await index.initialize();
 
-  const openPanel = () => {
+  const openPanel = (mode: 'all' | 'resx' | 'json' = 'all') => {
     if (!index) {
       return;
     }
+    index.setFileMode(mode);
     ResxGuardPanel.show(context.extensionUri, index);
   };
 

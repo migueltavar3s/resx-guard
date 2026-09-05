@@ -17,6 +17,11 @@ import {
   renameResxKey,
   setResxComment,
   setResxValue,
+  parseI18nFile,
+  addI18nEntry,
+  deleteI18nEntry,
+  renameI18nKey,
+  setI18nValue,
   groupResxFiles,
   attachIssuesToRows,
   buildRows,
@@ -35,6 +40,7 @@ import {
   resolveFamilyForImport,
   UsageIndex,
   isUsageSourcePath,
+  buildTree,
   type ExcelWorkbookPayload,
 } from '@resx-guard/core-ts';
 
@@ -52,6 +58,7 @@ export class ResourceIndex {
   readonly onDidChange = this.onDidChangeEmitter.event;
   private updatingFromUs = false;
   private readonly usageIndex = new UsageIndex();
+  private fileMode: 'all' | 'resx' | 'json' = 'all';
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -60,6 +67,48 @@ export class ResourceIndex {
 
   get isUpdatingFromUs(): boolean {
     return this.updatingFromUs;
+  }
+
+  private parseFile(filePath: string) {
+    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+      return parseI18nFile(filePath);
+    }
+    return parseResxFile(filePath);
+  }
+
+  private async setFileValue(filePath: string, key: string, value: string, comment = '') {
+    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+      return setI18nValue(filePath, key, value);
+    }
+    return setResxValue(filePath, key, value);
+  }
+
+  private async addFileEntry(filePath: string, key: string, value: string, comment = '') {
+    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+      return addI18nEntry(filePath, key, value);
+    }
+    return addResxEntry(filePath, key, value, comment);
+  }
+
+  private async deleteFileEntry(filePath: string, key: string) {
+    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+      return deleteI18nEntry(filePath, key);
+    }
+    return deleteResxEntry(filePath, key);
+  }
+
+  private async renameFileKey(filePath: string, oldKey: string, newKey: string) {
+    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+      return renameI18nKey(filePath, oldKey, newKey);
+    }
+    return renameResxKey(filePath, oldKey, newKey);
+  }
+
+  private async setFileComment(filePath: string, key: string, comment: string) {
+    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+      return; // Not supported
+    }
+    return setResxComment(filePath, key, comment);
   }
 
   async refresh(): Promise<void> {
@@ -101,7 +150,7 @@ export class ResourceIndex {
     const uris: vscode.Uri[] = [];
     for (const folder of folders) {
       const found = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(folder, '**/*.resx'),
+        new vscode.RelativePattern(folder, '**/*.{resx,i18n,json}'),
         '{**/node_modules/**,**/bin/**,**/obj/**,**/.git/**}'
       );
       uris.push(...found);
@@ -119,7 +168,7 @@ export class ResourceIndex {
     await Promise.all(
       paths.map(async (p) => {
         try {
-          const parsed = await parseResxFile(p);
+          const parsed = await this.parseFile(p);
           this.fileCache.set(path.normalize(p), parsed);
         } catch (err) {
           console.error('Failed to parse', p, err);
@@ -164,7 +213,7 @@ export class ResourceIndex {
     }
     const normalized = path.normalize(filePath);
     try {
-      const parsed = await parseResxFile(normalized);
+      const parsed = await this.parseFile(normalized);
       this.fileCache.set(normalized, parsed);
     } catch {
       this.fileCache.delete(normalized);
@@ -193,13 +242,39 @@ export class ResourceIndex {
     this.onDidChangeEmitter.fire();
   }
 
+  setFileMode(mode: 'all' | 'resx' | 'json') {
+    if (this.fileMode !== mode) {
+      this.fileMode = mode;
+      this.rebuildRowsAndValidate();
+      this.onDidChangeEmitter.fire();
+    }
+  }
+
   getSnapshot(language: string): IndexSnapshot {
     const selected = [...this.selectedFamilyIds];
     const filteredRows = this.rows.filter((r) => this.selectedFamilyIds.has(r.familyId));
     const tree = this.applyCheckedState(this.tree);
+    const isResx = (f: ResxFamily) => !f.basePath.toLowerCase().endsWith('.json') && !f.basePath.toLowerCase().endsWith('.i18n');
+    const isJson = (f: ResxFamily) => f.basePath.toLowerCase().endsWith('.json') || f.basePath.toLowerCase().endsWith('.i18n');
+    
+    let activeFamilies = this.families;
+    if (this.fileMode === 'resx') {
+      activeFamilies = this.families.filter(isResx);
+    } else if (this.fileMode === 'json') {
+      activeFamilies = this.families.filter(isJson);
+    }
+
+    const activeFamilyIds = new Set(activeFamilies.map(f => f.id));
+    
+    const selected = [...this.selectedFamilyIds].filter(id => activeFamilyIds.has(id));
+    const filteredRows = this.rows.filter((r) => this.selectedFamilyIds.has(r.familyId) && activeFamilyIds.has(r.familyId));
+    
+    const activeTree = buildTree(activeFamilies);
+    const tree = this.applyCheckedState(activeTree);
 
     return {
       families: this.families,
+      families: activeFamilies,
       rows: filteredRows,
       locales: this.locales,
       tree,
@@ -277,8 +352,8 @@ export class ResourceIndex {
 
     this.updatingFromUs = true;
     try {
-      await setResxValue(filePath, key, value);
-      const parsed = await parseResxFile(filePath);
+      await this.setFileValue(filePath, key, value);
+      const parsed = await this.parseFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
       if (!this.locales.includes(locale)) {
         this.collectLocales();
@@ -308,8 +383,8 @@ export class ResourceIndex {
     const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     this.updatingFromUs = true;
     try {
-      await setResxComment(filePath, key, comment);
-      const parsed = await parseResxFile(filePath);
+      await this.setFileComment(filePath, key, comment);
+      const parsed = await this.parseFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
     } finally {
       setTimeout(() => {
@@ -326,7 +401,8 @@ export class ResourceIndex {
       return;
     }
     let finalKey = key.trim();
-    if (!finalKey && this.settings.keyNaming === 'pascalFromNeutral') {
+    const isJson = family.basePath.toLowerCase().endsWith('.json') || family.basePath.toLowerCase().endsWith('.i18n');
+    if (!finalKey && this.settings.keyNaming === 'pascalFromNeutral' && !isJson) {
       finalKey = toPascalCaseKey(neutralValue);
     }
     if (!finalKey) {
@@ -339,16 +415,16 @@ export class ResourceIndex {
     const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     this.updatingFromUs = true;
     try {
-      await addResxEntry(filePath, finalKey, neutralValue);
-      const parsed = await parseResxFile(filePath);
+      await this.addFileEntry(filePath, finalKey, neutralValue);
+      const parsed = await this.parseFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
 
       for (const [locale, satellitePath] of Object.entries(family.files)) {
         if (locale === NEUTRAL_LOCALE || satellitePath === filePath) {
           continue;
         }
-        await addResxEntry(satellitePath, finalKey, '');
-        const satellite = await parseResxFile(satellitePath);
+        await this.addFileEntry(satellitePath, finalKey, '');
+        const satellite = await this.parseFile(satellitePath);
         this.fileCache.set(path.normalize(satellitePath), satellite);
       }
     } finally {
@@ -372,9 +448,9 @@ export class ResourceIndex {
     this.updatingFromUs = true;
     try {
       for (const filePath of Object.values(family.files)) {
-        await deleteResxEntry(filePath, key);
+        await this.deleteFileEntry(filePath, key);
         try {
-          const parsed = await parseResxFile(filePath);
+          const parsed = await this.parseFile(filePath);
           this.fileCache.set(path.normalize(filePath), parsed);
         } catch {
           /* ignore */
@@ -404,9 +480,9 @@ export class ResourceIndex {
     this.updatingFromUs = true;
     try {
       for (const filePath of Object.values(family.files)) {
-        await renameResxKey(filePath, oldKey, trimmed);
+        await this.renameFileKey(filePath, oldKey, trimmed);
         try {
-          const parsed = await parseResxFile(filePath);
+          const parsed = await this.parseFile(filePath);
           this.fileCache.set(path.normalize(filePath), parsed);
         } catch {
           /* ignore */
@@ -486,7 +562,7 @@ export class ResourceIndex {
           await this.mergeKeyValues(family, key, values);
           if (row.comment) {
             const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-            await setResxComment(filePath, key, row.comment);
+            await this.setFileComment(filePath, key, row.comment);
           }
           updated += 1;
         }
@@ -521,13 +597,13 @@ export class ResourceIndex {
   ): Promise<void> {
     const locales = new Set([...Object.keys(family.files), ...Object.keys(values)]);
     const neutralPath = this.ensureLocalePath(family, NEUTRAL_LOCALE);
-    await addResxEntry(neutralPath, key, values[NEUTRAL_LOCALE] ?? '', comment);
+    await this.addFileEntry(neutralPath, key, values[NEUTRAL_LOCALE] ?? '', comment);
     for (const locale of locales) {
       if (locale === NEUTRAL_LOCALE) {
         continue;
       }
       const filePath = this.ensureLocalePath(family, locale);
-      await addResxEntry(filePath, key, values[locale] ?? '');
+      await this.addFileEntry(filePath, key, values[locale] ?? '');
     }
   }
 
@@ -541,7 +617,7 @@ export class ResourceIndex {
         continue;
       }
       const filePath = this.ensureLocalePath(family, locale);
-      await setResxValue(filePath, key, value);
+      await this.setFileValue(filePath, key, value);
     }
   }
 
@@ -560,7 +636,7 @@ export class ResourceIndex {
   private async reloadFamilyFiles(family: ResxFamily): Promise<void> {
     for (const filePath of Object.values(family.files)) {
       try {
-        const parsed = await parseResxFile(filePath);
+        const parsed = await this.parseFile(filePath);
         this.fileCache.set(path.normalize(filePath), parsed);
       } catch {
         /* ignore */
@@ -578,6 +654,9 @@ export class ResourceIndex {
   }
 
   private async maybeUpdateDesigner(family: ResxFamily): Promise<void> {
+    const isJson = family.basePath.toLowerCase().endsWith('.json') || family.basePath.toLowerCase().endsWith('.i18n');
+    if (isJson) return;
+
     const neutralPath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     const files: ResxFile[] = [];
     for (const [locale, filePath] of Object.entries(family.files)) {
@@ -778,8 +857,15 @@ export class ResourceIndex {
     if (!locale) {
       return basePath;
     }
-    const dir = path.dirname(basePath);
+    const isI18n = basePath.toLowerCase().endsWith('.json') || basePath.toLowerCase().endsWith('.i18n');
+    const ext = basePath.toLowerCase().endsWith('.json') ? 'json' : 'i18n';
     const identity = resolveResxIdentity(basePath);
+    if (isI18n) {
+      // For i18n/json, structure is [familyDir]/[locale]/[baseName].[ext]
+      return path.join(identity.familyDir, locale, `${identity.baseName}.${ext}`);
+    }
+
+    const dir = path.dirname(basePath);
     if (!identity.baseName) {
       return path.join(dir, `${locale}.resx`);
     }

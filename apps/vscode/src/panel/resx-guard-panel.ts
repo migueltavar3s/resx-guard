@@ -242,6 +242,7 @@ export class ResxGuardSidebarProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly onOpen: () => void
+    private readonly onOpen: (mode: 'all' | 'resx' | 'json') => void
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -286,17 +287,34 @@ export class ResxGuardSidebarProvider implements vscode.WebviewViewProvider {
 <body>
   <h2>ResX Guard</h2>
   <p>Manage .resx translations in a fast spreadsheet-style grid.</p>
+  <p>Manage translations in a fast spreadsheet-style grid.</p>
+  
+  <div style="margin: 16px 0;">
+    <label for="mode" style="font-size: 12px; font-weight: 600; margin-bottom: 4px; display: block;">File Types:</label>
+    <select id="mode" style="width: 100%; padding: 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px;">
+      <option value="all">All Files (.resx & .json)</option>
+      <option value="resx">C# Resources (.resx)</option>
+      <option value="json">Web i18n (.json)</option>
+    </select>
+  </div>
+
   <button id="open">Open Manager</button>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     document.getElementById('open').addEventListener('click', () => vscode.postMessage({ type: 'open' }));
+    document.getElementById('open').addEventListener('click', () => {
+      const mode = document.getElementById('mode').value;
+      vscode.postMessage({ type: 'open', mode });
+    });
   </script>
 </body>
 </html>`;
 
     webview.onDidReceiveMessage((msg: { type: string }) => {
+    webview.onDidReceiveMessage((msg: { type: string; mode?: string }) => {
       if (msg.type === 'open') {
         this.onOpen();
+        this.onOpen(msg.mode as 'all' | 'resx' | 'json' || 'all');
       }
     });
   }

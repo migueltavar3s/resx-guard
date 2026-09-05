@@ -35,6 +35,8 @@ export function validateFamily(
   for (const f of files) {
     byLocale.set(f.locale, f);
   }
+  
+  const isJson = family.basePath.toLowerCase().endsWith('.json') || family.basePath.toLowerCase().endsWith('.i18n');
 
   const neutral = byLocale.get(NEUTRAL_LOCALE) ?? files[0];
   if (!neutral) {
@@ -76,7 +78,7 @@ export function validateFamily(
     const neutralEntry = neutral.entries.find((e) => e.key === key);
     const neutralValue = neutralEntry?.value ?? '';
 
-    if (rules.keyPascalCase && neutralEntry) {
+    if (rules.keyPascalCase && neutralEntry && !isJson) {
       const expected = toPascalCaseKey(neutralValue);
       if (expected && key !== expected) {
         issues.push({
