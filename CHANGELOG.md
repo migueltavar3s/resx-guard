@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.2.2
+
+### JSON i18n (VS Code)
+- Nested `locales/<locale>/*.json` (and `.i18n`) families can be edited in the same grid as `.resx`
+- Config files such as `package.json` are ignored; PascalCase naming is not applied to JSON keys
+- Activity Bar file-type filter: all / `.resx` / JSON
+
+### Key naming
+- **Type the key myself** skips PascalCase naming warnings and revalidates the grid as soon as you switch
+- **Show naming suggestions** and the PascalCase validation rule only appear when key naming is PascalCase from English
+
+### Suggestions
+- PascalCase naming issues keep a **Naming** chip plus a separate **Apply** button in the grid. Approve does not live in Summary
+- **Show naming suggestions** (`namingSuggestions`) lives in the Key naming settings card, independent of the PascalCase validation rule
+- Issue chips no longer use the help (`?`) cursor
+
+### Usage Count
+- New Usage column after Key, with incremental per-file indexing of `.cs`, `.cshtml`, JS, and other source files
+
+### File writing
+- `.resx` writes are surgical text edits so encoding, newline style, XML declaration, and surrounding markup stay intact
+- Adding or renaming a key keeps `<data>` entries in alphabetical order
+
+### Add resource
+- After adding a key the grid selects that row, scrolls to it, and focuses the first empty language cell
+- Enter creates the key; Shift+Enter inserts a new line in the neutral value
+
+## 0.2.1
+
+Internal sideload release (VS Code + Visual Studio). Not published to the Marketplace until this lands on `main`.
+
+### Filters
+- Empty filter results keep the grid header, so filters stay visible
+- **Clear filters** restores the full row list in one click
+
+### Naming
+- PascalCase key warnings include a `suggestedKey`
+- **Apply** in the Issues column and in Summary renames the key through the existing host action
+
+### Issues, warnings, and errors
+- An *issue* is any validation finding; *errors* are duplicate keys; *warnings* are quality checks
+- Portuguese copy no longer mixes “Avisos” with “Warnings”
+- Summary legend and Issues tooltips match that distinction
+
 ## 0.2.0
 
 Marketplace release focused on Excel workflows, a safer Summary pane, and polish for publish.

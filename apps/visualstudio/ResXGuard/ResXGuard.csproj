@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ResXGuard</RootNamespace>
+    <AssemblyName>ResXGuard</AssemblyName>
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
+    <IncludeClientEnabledPkgFile>false</IncludeClientEnabledPkgFile>
+    <CreateVsixContainer>true</CreateVsixContainer>
+    <UseCodebase>true</UseCodebase>
+    <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
+    <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
+    <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
+    <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
+    <UseWPF>true</UseWPF>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DeployExtension>true</DeployExtension>
+    <StartAction>Program</StartAction>
+    <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
+    <SampleProjectSolution>$(MSBuildThisFileDirectory)..\..\..\fixtures\sample-project\SampleProject.sln</SampleProjectSolution>
+    <StartArguments>/rootsuffix Exp "$(SampleProjectSolution)"</StartArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DeployExtension>false</DeployExtension>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.0.32112.339" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.0.5232" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ResXGuard.Core\ResXGuard.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\Icon.png">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebView\dist\**\*">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="source.extension.vsixmanifest">
+      <SubType>Designer</SubType>
+    </None>
+    <VSCTCompile Include="ResXGuard.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+    </VSCTCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="Exists('$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets')" />
+  <Target Name="EnsureVsixPaths" BeforeTargets="GenerateTemplatesManifest;GenerateFileManifest;GenerateResourceAndCtoFileManifests;MergeCtoResource;GeneratePkgDef;CreateVsixContainer">
+    <PropertyGroup>
+      <_VsixObj>$(MSBuildProjectDirectory)\obj\$(Configuration)\$(TargetFramework)\</_VsixObj>
+      <IntermediateOutputPath>$(_VsixObj)</IntermediateOutputPath>
+      <FileManifest>$(_VsixObj)files.json</FileManifest>
+      <ResourceManifest>$(_VsixObj)resources.json</ResourceManifest>
+      <CtoFileManifest>$(_VsixObj)cto-files.json</CtoFileManifest>
+      <CtoCacheFile>$(_VsixObj)mergeCto.cache</CtoCacheFile>
+      <TemplateFileManifest>$(_VsixObj)templateFiles.json</TemplateFileManifest>
+      <TemplateOutputDirectory>$(_VsixObj)</TemplateOutputDirectory>
+      <CreateTemplateManifestsCacheFile>$(_VsixObj)createTemplateManifests.cache</CreateTemplateManifestsCacheFile>
+      <ClientEnabledPkgOutputDirectory>$(_VsixObj)</ClientEnabledPkgOutputDirectory>
+    </PropertyGroup>
+  </Target>
+  <Target Name="SetCreatePkgDefPath" BeforeTargets="GeneratePkgDef">
+    <PropertyGroup>
+      <CreatePkgDefAssemblyToProcess>$(OutDir)$(AssemblyName).dll</CreatePkgDefAssemblyToProcess>
+    </PropertyGroup>
+  </Target>
+  <Target Name="ResXGuardVsixBuild" AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="GeneratePkgDef;CopyPkgDef;CreateVsixContainer" />
+  <Target Name="ResXGuardDeployExtension" AfterTargets="ResXGuardVsixBuild" DependsOnTargets="DeployVsixExtensionFiles" Condition="'$(DeployExtension)'=='true'" />
+</Project>

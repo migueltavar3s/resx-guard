@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable">
+
+
+
+  <Extern href="stdidcmd.h"/>
+
+  <Extern href="vsshlids.h"/>
+
+
+
+  <Symbols>
+
+    <GuidSymbol name="guidResXGuardPackage" value="{a1b2c3d4-e5f6-7890-abcd-ef1234567890}"/>
+
+    <GuidSymbol name="guidResXGuardCmdSet" value="{c3d4e5f6-a7b8-9012-cdef-123456789012}">
+
+      <IDSymbol name="ResXGuardOpenGroup" value="0x1020"/>
+
+      <IDSymbol name="ResXGuardXProjOpenGroup" value="0x1021"/>
+
+      <IDSymbol name="ResXGuardOtherWindowsGroup" value="0x1024"/>
+
+      <IDSymbol name="ResXGuardToolsGroup" value="0x1022"/>
+
+      <IDSymbol name="cmdidOpenToolWindow" value="0x0100"/>
+
+      <IDSymbol name="cmdidOpenFromResx" value="0x0101"/>
+
+      <IDSymbol name="cmdidOpenToolWindowTools" value="0x0102"/>
+
+      <IDSymbol name="cmdidOpenFromResxXProj" value="0x0103"/>
+
+    </GuidSymbol>
+
+  </Symbols>
+
+
+
+  <Commands package="guidResXGuardPackage">
+
+    <Groups>
+
+      <Group guid="guidResXGuardCmdSet" id="ResXGuardOpenGroup" priority="0x0150">
+
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
+
+      </Group>
+
+      <Group guid="guidResXGuardCmdSet" id="ResXGuardXProjOpenGroup" priority="0x0100">
+
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_SLNITEM"/>
+
+      </Group>
+
+      <Group guid="guidResXGuardCmdSet" id="ResXGuardOtherWindowsGroup" priority="0x0600">
+
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1"/>
+
+      </Group>
+
+      <Group guid="guidResXGuardCmdSet" id="ResXGuardToolsGroup" priority="0x0100">
+
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+
+      </Group>
+
+    </Groups>
+
+
+
+    <Buttons>
+
+      <Button guid="guidResXGuardCmdSet" id="cmdidOpenToolWindowTools" priority="0x0100" type="Button">
+
+        <Parent guid="guidResXGuardCmdSet" id="ResXGuardToolsGroup"/>
+
+        <Strings>
+
+          <ButtonText>ResX Guard</ButtonText>
+
+        </Strings>
+
+      </Button>
+
+      <Button guid="guidResXGuardCmdSet" id="cmdidOpenToolWindow" priority="0x0100" type="Button">
+
+        <Parent guid="guidResXGuardCmdSet" id="ResXGuardOtherWindowsGroup"/>
+
+        <Strings>
+
+          <ButtonText>ResX Guard</ButtonText>
+
+        </Strings>
+
+      </Button>
+
+      <Button guid="guidResXGuardCmdSet" id="cmdidOpenFromResx" priority="0x0200" type="Button">
+
+        <Parent guid="guidResXGuardCmdSet" id="ResXGuardOpenGroup"/>
+
+        <CommandFlag>DefaultInvisible</CommandFlag>
+
+        <CommandFlag>DynamicVisibility</CommandFlag>
+
+        <Strings>
+
+          <ButtonText>Open with ResX Guard</ButtonText>
+
+        </Strings>
+
+      </Button>
+
+      <Button guid="guidResXGuardCmdSet" id="cmdidOpenFromResxXProj" priority="0x0100" type="Button">
+
+        <Parent guid="guidResXGuardCmdSet" id="ResXGuardXProjOpenGroup"/>
+
+        <CommandFlag>DefaultInvisible</CommandFlag>
+
+        <CommandFlag>DynamicVisibility</CommandFlag>
+
+        <Strings>
+
+          <ButtonText>Open with ResX Guard</ButtonText>
+
+        </Strings>
+
+      </Button>
+
+    </Buttons>
+
+  </Commands>
+
+
+
+</CommandTable>
+
+

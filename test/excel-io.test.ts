@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
-import { NEUTRAL_LOCALE, type ResxFamily } from '../src/models/types';
+import { NEUTRAL_LOCALE, type ResxFamily } from '@resx-guard/core-ts';
 import {
   buildExcelPayload,
   localeColumnName,
@@ -10,7 +10,7 @@ import {
   remapImportedLocales,
   resolveFamilyForImport,
   workbookBuffer,
-} from '../src/services/excel-io';
+} from '@resx-guard/core-ts';
 
 function workbookFromRows(rows: (string | number)[][]): Buffer {
   const workbook = XLSX.utils.book_new();

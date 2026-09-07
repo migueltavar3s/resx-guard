@@ -1,4 +1,4 @@
-name: Release
+name: Release VS Code
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   test-and-publish:
-    name: Test and publish
+    name: Test and publish VS Code extension
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,20 +17,19 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run sync-version
       - run: npm test
       - run: npm run build
       - name: Package VSIX
+        working-directory: apps/vscode
         run: npx --yes @vscode/vsce package --no-dependencies
-      - name: Publish to Visual Studio Marketplace
+      - name: Publish to Visual Studio Marketplace (VS Code)
+        working-directory: apps/vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           if [ -z "$VSCE_PAT" ]; then
             echo "Missing secret VSCE_PAT."
-            echo "Create a Personal Access Token at https://marketplace.visualstudio.com/manage"
-            echo "with Marketplace (Publish) scope, then add it as repo secret VSCE_PAT."
             exit 1
           fi
-          # Publish the version from package.json (currently 0.2.0).
-          # Merging a PR into main triggers this job and ships to the Marketplace.
           npx --yes @vscode/vsce publish --no-dependencies --pat "$VSCE_PAT"

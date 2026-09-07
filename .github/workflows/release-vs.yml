@@ -1,0 +1,38 @@
+name: Release Visual Studio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/visualstudio/**'
+      - 'packages/ui/**'
+      - 'packages/core-ts/**'
+      - 'version.json'
+      - 'scripts/**'
+
+jobs:
+  build-vsix:
+    name: Build Visual Studio VSIX
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: npm ci
+      - run: npm run sync-version
+      - run: npm run build:ui
+      - run: dotnet test apps/visualstudio/ResXGuard.Core.Tests/ResXGuard.Core.Tests.csproj -c Release
+      - run: dotnet build apps/visualstudio/ResXGuard/ResXGuard.csproj -c Release
+      - name: Publish to Visual Studio Marketplace
+        env:
+          VSIX_PAT: ${{ secrets.VSIX_PAT }}
+        run: |
+          if (-not $env:VSIX_PAT) { Write-Host "VSIX_PAT not set — skipping publish"; exit 0 }
+          $vsix = Get-ChildItem -Path "apps/visualstudio/ResXGuard/bin/Release" -Filter "*.vsix" -Recurse | Select-Object -First 1
+          if (-not $vsix) { throw "VSIX not found" }
+          Write-Host "Built VSIX at $($vsix.FullName)"

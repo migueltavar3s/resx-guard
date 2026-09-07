@@ -3,10 +3,11 @@ import * as path from 'path';
 import {
   attachIssuesToRows,
   buildRows,
+  effectiveValidationRules,
   validateFamily,
-} from '../src/services/validation-engine';
-import type { ResxFamily, ResxFile } from '../src/models/types';
-import { groupResxFiles } from '../src/services/workspace-scanner';
+} from '@resx-guard/core-ts';
+import type { ResxFamily, ResxFile } from '@resx-guard/core-ts';
+import { groupResxFiles } from '@resx-guard/core-ts';
 
 const rules = {
   keyPascalCase: true,
@@ -59,6 +60,32 @@ describe('validation engine', () => {
     expect(rulesHit.has('placeholders')).toBe(true);
     expect(rulesHit.has('missingTranslation')).toBe(true);
     expect(rulesHit.has('keyPascalCase')).toBe(true);
+    const naming = issues.find((i) => i.rule === 'keyPascalCase' && i.key === 'WrongKey');
+    expect(naming?.severity).toBe('warning');
+    expect(naming?.suggestedKey).toBe('SaveFailed');
+    expect(issues.find((i) => i.rule === 'duplicateKeys')).toBeUndefined();
+  });
+
+  it('skips PascalCase naming issues when keys are typed manually', () => {
+    const files: ResxFile[] = [
+      {
+        path: '/p/Resources.resx',
+        locale: '',
+        duplicateKeys: [],
+        entries: [{ key: 'WrongKey', value: 'Save failed.', comment: '' }],
+      },
+    ];
+    const issues = validateFamily(
+      family(),
+      files,
+      effectiveValidationRules(rules, 'manual')
+    );
+    expect(issues.some((i) => i.rule === 'keyPascalCase')).toBe(false);
+    expect(
+      validateFamily(family(), files, effectiveValidationRules(rules, 'pascalFromNeutral')).some(
+        (i) => i.rule === 'keyPascalCase'
+      )
+    ).toBe(true);
   });
 
   it('builds rows and attaches issues', () => {
@@ -82,13 +109,14 @@ describe('validation engine', () => {
     expect(rows[0].values.pt).toBe('Olá');
 
     const withIssues = attachIssuesToRows(rows, [
-      {
-        rule: 'keyPascalCase',
-        severity: 'warning',
-        message: 'x',
-        key: 'Hello',
-        familyId: 'f1',
-      },
+    {
+      rule: 'keyPascalCase',
+      severity: 'warning',
+      message: 'x',
+      key: 'Hello',
+      familyId: 'f1',
+      suggestedKey: 'Hello',
+    },
     ]);
     expect(withIssues[0].issues).toHaveLength(1);
   });

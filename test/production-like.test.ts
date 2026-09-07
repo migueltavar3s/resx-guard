@@ -8,14 +8,8 @@ import {
   parseResxFile,
   renameResxKey,
   setResxValue,
-} from '../src/services/resx-parser';
-import { groupResxFiles } from '../src/services/workspace-scanner';
-import { buildRows, validateFamily } from '../src/services/validation-engine';
-import {
-  generateDesignerCs,
-  resolveDesignerMeta,
-  buildDesignerEntries,
-} from '../src/services/designer-generator';
+} from '@resx-guard/core-ts';
+import { groupResxFiles, buildRows, validateFamily, generateDesignerCs, resolveDesignerMeta, buildDesignerEntries } from '@resx-guard/core-ts';
 
 const VS_SCHEMA = `  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -268,7 +262,7 @@ describe('production-like multi-locale project', () => {
     expect(cs).toContain('PayNow');
     expect(cs).toContain('pt: Pagar agora');
 
-    const excel = await import('../src/services/excel-io');
+    const excel = await import('@resx-guard/core-ts');
     const payload = excel.buildExcelPayload(families, rows, ['', 'pt', 'es']);
     const buffer = excel.workbookBuffer(payload);
     const parsed = excel.parseWorkbook(buffer);

@@ -12,20 +12,50 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  
-  
-  
-  <data name="WelcomeMessage" xml:space="preserve">
-    <value>Welcome to ResX Guard</value>
+  <data name="AddressLine" xml:space="preserve">
+    <value>Line one
+Line two</value>
   </data>
-  <data name="ProjectHasNoResourceFile" xml:space="preserve">
-    <value>Project has no resource file</value>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Confirms" xml:space="preserve">
+    <value>Confirms</value>
+  </data>
+  <data name="DeleteFile" xml:space="preserve">
+    <value>Delete file?</value>
+  </data>
+  <data name="ExportComplete" xml:space="preserve">
+    <value>Export completed successfully.</value>
+  </data>
+  <data name="HelpHint" xml:space="preserve">
+    <value>Press F1 for help</value>
   </data>
   <data name="ImportFailedEror" xml:space="preserve">
     <value>Import failed: {0}</value>
   </data>
-  
-  
-
-  
-  <data name="Confirms" xml:space="preserve"><value>Confirms</value></data></root>
+  <data name="ItemsFound" xml:space="preserve">
+    <value>{0} items found</value>
+  </data>
+  <data name="ItemsFoundBad" xml:space="preserve">
+    <value>{0} items found</value>
+  </data>
+  <data name="LongKeyThatShouldNotBreakTheSummaryPanelLayoutWhenDisplayed" xml:space="preserve">
+    <value>A very long key for layout testing</value>
+  </data>
+  <data name="OpenSettings" xml:space="preserve">
+    <value>Open settings</value>
+  </data>
+  <data name="ProjectHasNoResourceFile" xml:space="preserve">
+    <value>Project has no resource file</value>
+  </data>
+  <data name="SaveChanges" xml:space="preserve">
+    <value>Save changes</value>
+  </data>
+  <data name="untitled_key" xml:space="preserve">
+    <value>untitled</value>
+  </data>
+  <data name="WelcomeMessage" xml:space="preserve">
+    <value>Welcome to ResX Guard</value>
+  </data>
+</root>

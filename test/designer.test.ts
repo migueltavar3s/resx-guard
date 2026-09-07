@@ -6,7 +6,7 @@ import {
   designerTypeNamespace,
   generateDesignerCs,
   resolveDesignerMeta,
-} from '../src/services/designer-generator';
+} from '@resx-guard/core-ts';
 
 describe('designer generator', () => {
   it('emits auto-generated strongly typed resources', () => {

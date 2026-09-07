@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "node16",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node16",
+    "paths": {
+      "@resx-guard/core-ts": ["../../packages/core-ts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "references": [{ "path": "../../packages/core-ts" }]
+}

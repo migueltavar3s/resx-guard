@@ -7,8 +7,8 @@ on:
     branches: [dev, main]
 
 jobs:
-  test:
-    name: Tests
+  test-node:
+    name: Node tests and VS Code build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -17,7 +17,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run sync-version
       - run: npm test
       - run: npm run build
-      # Marketplace publish runs only from .github/workflows/release.yml on push to main
-      # (after a PR from dev → main is merged). Requires secret VSCE_PAT.
+
+  test-dotnet:
+    name: .NET core tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: node scripts/sync-version.mjs
+      - run: dotnet test apps/visualstudio/ResXGuard.Core.Tests/ResXGuard.Core.Tests.csproj -c Release

@@ -1,9 +1,48 @@
+# Dependencies
 node_modules/
+
+# Node / TypeScript build outputs
 dist/
-webview/dist/
-*.vsix
-.DS_Store
-*.log
-.vscode-test/
-coverage/
+**/dist/
 *.tsbuildinfo
+coverage/
+packages/ui/.env.build
+
+# Legacy monorepo paths
+webview/dist/
+
+# VS Code extension
+.vscode-test/
+*.vsix
+
+# .NET / Visual Studio
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+*.user
+*.userosscache
+*.suo
+*.cache
+TestResults/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

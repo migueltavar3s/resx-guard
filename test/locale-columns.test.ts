@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeVisibleLocales } from '../src/services/locale-columns';
+import { mergeVisibleLocales } from '@resx-guard/core-ts';
 
 describe('mergeVisibleLocales', () => {
   it('shows every locale on first load', () => {

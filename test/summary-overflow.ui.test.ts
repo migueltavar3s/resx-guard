@@ -35,7 +35,7 @@ async function launchBrowser(): Promise<Browser> {
 
 describe('Summary overflow UI', () => {
   it('keeps a 260px Summary pane from growing when a naming issue embeds a huge key', async () => {
-    const css = fs.readFileSync(path.resolve(__dirname, '../webview/styles.css'), 'utf8');
+    const css = fs.readFileSync(path.resolve(__dirname, '../packages/ui/styles.css'), 'utf8');
     const html = `<!DOCTYPE html>
 <html>
 <head>

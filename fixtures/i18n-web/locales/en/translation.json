@@ -1,0 +1,7 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Settings"
+  },
+  "hello": "Hello {0}"
+}

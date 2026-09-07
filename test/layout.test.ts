@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { applyColumnResize, clampPanelWidth, distributeToWidth } from '../webview/hooks/usePersistedLayout';
+import { applyColumnResize, clampPanelWidth, distributeToWidth } from '../packages/ui/hooks/usePersistedLayout';
 
-const styles = fs.readFileSync(path.resolve(__dirname, '../webview/styles.css'), 'utf8');
+const styles = fs.readFileSync(path.resolve(__dirname, '../packages/ui/styles.css'), 'utf8');
 
 function selectorBlock(selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
