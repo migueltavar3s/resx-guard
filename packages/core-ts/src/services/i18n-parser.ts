@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
-import type { ResxEntry, ResxFile } from '../models/types';
+import type { ResxFile } from '../models/types';
+import { flattenI18nObject, parseI18nJsonText } from './i18n-json';
 import { resolveResxIdentity } from './naming';
 
 export async function parseI18nFile(filePath: string): Promise<ResxFile> {
@@ -7,39 +8,20 @@ export async function parseI18nFile(filePath: string): Promise<ResxFile> {
   try {
     content = await fs.readFile(filePath, 'utf8');
   } catch {
-    // If file doesn't exist yet, just return empty
+    // Missing files are treated as empty translation objects.
   }
-  let data: any = {};
-  
+
+  let data: Record<string, unknown> = {};
   if (content.trim()) {
     try {
-      data = JSON.parse(content);
-    } catch (e) {
+      data = parseI18nJsonText(content);
+    } catch {
       throw new Error(`Invalid JSON in i18n file: ${filePath}`);
     }
   }
 
   const identity = resolveResxIdentity(filePath);
-  const entries: ResxEntry[] = [];
-  const duplicateKeys: string[] = [];
-  
-  // Flatten nested objects to dot-notation
-  const flatten = (obj: any, prefix = '') => {
-    for (const key of Object.keys(obj)) {
-      const propName = prefix ? `${prefix}.${key}` : key;
-      if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-        flatten(obj[key], propName);
-      } else {
-        entries.push({
-          key: propName,
-          value: String(obj[key] ?? ''),
-          comment: '' // JSON doesn't support comments
-        });
-      }
-    }
-  };
-  
-  flatten(data);
+  const { entries, duplicateKeys } = flattenI18nObject(data);
 
   return {
     path: filePath,

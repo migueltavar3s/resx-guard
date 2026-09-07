@@ -2,6 +2,11 @@
 
 ## 0.2.2
 
+### JSON i18n (VS Code)
+- Nested `locales/<locale>/*.json` (and `.i18n`) families can be edited in the same grid as `.resx`
+- Config files such as `package.json` are ignored; PascalCase naming is not applied to JSON keys
+- Activity Bar file-type filter: all / `.resx` / JSON
+
 ### Key naming
 - **Type the key myself** skips PascalCase naming warnings and revalidates the grid as soon as you switch
 - **Show naming suggestions** and the PascalCase validation rule only appear when key naming is PascalCase from English

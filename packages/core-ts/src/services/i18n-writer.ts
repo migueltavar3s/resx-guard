@@ -1,48 +1,32 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import {
+  deleteNestedValue,
+  getNestedValue,
+  isPlainObject,
+  leafToString,
+  parseI18nJsonText,
+  setNestedValue,
+} from './i18n-json';
 
-async function loadI18n(filePath: string): Promise<any> {
+async function loadI18n(filePath: string): Promise<Record<string, unknown>> {
   try {
     const content = await fs.readFile(filePath, 'utf8');
-    if (content.trim()) {
-      return JSON.parse(content);
+    return parseI18nJsonText(content);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {};
     }
-  } catch {
-    // Return empty object if file doesn't exist or is invalid
+    if (err instanceof SyntaxError) {
+      return {};
+    }
+    throw err;
   }
-  return {};
 }
 
-async function saveI18n(filePath: string, data: any): Promise<void> {
+async function saveI18n(filePath: string, data: Record<string, unknown>): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
-}
-
-function setNestedValue(obj: any, key: string, value: string): void {
-  const parts = key.split('.');
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    if (typeof current[part] !== 'object' || current[part] === null || Array.isArray(current[part])) {
-      current[part] = {};
-    }
-    current = current[part];
-  }
-  current[parts[parts.length - 1]] = value;
-}
-
-function deleteNestedValue(obj: any, key: string): void {
-  const parts = key.split('.');
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    if (typeof current[part] !== 'object' || current[part] === null) {
-      return; // Not found
-    }
-    current = current[part];
-  }
-  delete current[parts[parts.length - 1]];
-  // Optional: prune empty objects? For now just delete the leaf.
 }
 
 export async function setI18nValue(filePath: string, key: string, value: string): Promise<void> {
@@ -62,25 +46,15 @@ export async function deleteI18nEntry(filePath: string, key: string): Promise<vo
 }
 
 export async function renameI18nKey(filePath: string, oldKey: string, newKey: string): Promise<void> {
+  if (!oldKey || oldKey === newKey) {
+    return;
+  }
   const data = await loadI18n(filePath);
-  
-  // Get old value
-  const parts = oldKey.split('.');
-  let current = data;
-  let found = true;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    if (typeof current[part] !== 'object' || current[part] === null) {
-      found = false;
-      break;
-    }
-    current = current[part];
+  const value = getNestedValue(data, oldKey);
+  if (value === undefined || isPlainObject(value)) {
+    return;
   }
-  
-  if (found && current.hasOwnProperty(parts[parts.length - 1])) {
-    const value = current[parts[parts.length - 1]];
-    delete current[parts[parts.length - 1]];
-    setNestedValue(data, newKey, String(value));
-    await saveI18n(filePath, data);
-  }
+  deleteNestedValue(data, oldKey);
+  setNestedValue(data, newKey, typeof value === 'string' ? value : leafToString(value));
+  await saveI18n(filePath, data);
 }

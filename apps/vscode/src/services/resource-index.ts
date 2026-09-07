@@ -3,6 +3,7 @@ import * as path from 'path';
 import type {
   ExtensionSettings,
   IndexSnapshot,
+  ResourceFileMode,
   ResxFamily,
   ResxFile,
   ResourceRow,
@@ -41,6 +42,13 @@ import {
   UsageIndex,
   isUsageSourcePath,
   buildTree,
+  filterFamiliesByFileMode,
+  i18nExtensionOf,
+  isI18nFamily,
+  isI18nFilePath,
+  isI18nResourcePath,
+  localesFromFamilies,
+  normalizePathKey,
   type ExcelWorkbookPayload,
 } from '@resx-guard/core-ts';
 
@@ -58,7 +66,7 @@ export class ResourceIndex {
   readonly onDidChange = this.onDidChangeEmitter.event;
   private updatingFromUs = false;
   private readonly usageIndex = new UsageIndex();
-  private fileMode: 'all' | 'resx' | 'json' = 'all';
+  private fileMode: ResourceFileMode = 'all';
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -70,43 +78,43 @@ export class ResourceIndex {
   }
 
   private parseFile(filePath: string) {
-    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+    if (isI18nFilePath(filePath)) {
       return parseI18nFile(filePath);
     }
     return parseResxFile(filePath);
   }
 
-  private async setFileValue(filePath: string, key: string, value: string, comment = '') {
-    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+  private async setFileValue(filePath: string, key: string, value: string) {
+    if (isI18nFilePath(filePath)) {
       return setI18nValue(filePath, key, value);
     }
     return setResxValue(filePath, key, value);
   }
 
   private async addFileEntry(filePath: string, key: string, value: string, comment = '') {
-    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+    if (isI18nFilePath(filePath)) {
       return addI18nEntry(filePath, key, value);
     }
     return addResxEntry(filePath, key, value, comment);
   }
 
   private async deleteFileEntry(filePath: string, key: string) {
-    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+    if (isI18nFilePath(filePath)) {
       return deleteI18nEntry(filePath, key);
     }
     return deleteResxEntry(filePath, key);
   }
 
   private async renameFileKey(filePath: string, oldKey: string, newKey: string) {
-    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
+    if (isI18nFilePath(filePath)) {
       return renameI18nKey(filePath, oldKey, newKey);
     }
     return renameResxKey(filePath, oldKey, newKey);
   }
 
   private async setFileComment(filePath: string, key: string, comment: string) {
-    if (filePath.toLowerCase().endsWith('.json') || filePath.toLowerCase().endsWith('.i18n')) {
-      return; // Not supported
+    if (isI18nFilePath(filePath)) {
+      return;
     }
     return setResxComment(filePath, key, comment);
   }
@@ -147,16 +155,19 @@ export class ResourceIndex {
       return;
     }
 
-    const uris: vscode.Uri[] = [];
+    const discovered: string[] = [];
     for (const folder of folders) {
       const found = await vscode.workspace.findFiles(
         new vscode.RelativePattern(folder, '**/*.{resx,i18n,json}'),
         '{**/node_modules/**,**/bin/**,**/obj/**,**/.git/**}'
       );
-      uris.push(...found);
+      discovered.push(...found.map((u) => u.fsPath));
     }
 
-    const paths = uris.map((u) => u.fsPath);
+    const allNormalized = new Set(discovered.map((p) => normalizePathKey(p)));
+    const paths = discovered.filter(
+      (p) => !isI18nFilePath(p) || isI18nResourcePath(p, allNormalized)
+    );
     const scanned = groupResxFiles(
       paths,
       folders.map((f) => ({ name: f.name, uri: { fsPath: f.uri.fsPath } }))
@@ -211,6 +222,9 @@ export class ResourceIndex {
     if (this.updatingFromUs) {
       return;
     }
+    if (isI18nFilePath(filePath) && !isI18nResourcePath(filePath)) {
+      return;
+    }
     const normalized = path.normalize(filePath);
     try {
       const parsed = await this.parseFile(normalized);
@@ -242,44 +256,30 @@ export class ResourceIndex {
     this.onDidChangeEmitter.fire();
   }
 
-  setFileMode(mode: 'all' | 'resx' | 'json') {
+  setFileMode(mode: ResourceFileMode) {
     if (this.fileMode !== mode) {
       this.fileMode = mode;
-      this.rebuildRowsAndValidate();
       this.onDidChangeEmitter.fire();
     }
   }
 
   getSnapshot(language: string): IndexSnapshot {
-    const selected = [...this.selectedFamilyIds];
-    const filteredRows = this.rows.filter((r) => this.selectedFamilyIds.has(r.familyId));
-    const tree = this.applyCheckedState(this.tree);
-    const isResx = (f: ResxFamily) => !f.basePath.toLowerCase().endsWith('.json') && !f.basePath.toLowerCase().endsWith('.i18n');
-    const isJson = (f: ResxFamily) => f.basePath.toLowerCase().endsWith('.json') || f.basePath.toLowerCase().endsWith('.i18n');
-    
-    let activeFamilies = this.families;
-    if (this.fileMode === 'resx') {
-      activeFamilies = this.families.filter(isResx);
-    } else if (this.fileMode === 'json') {
-      activeFamilies = this.families.filter(isJson);
-    }
-
-    const activeFamilyIds = new Set(activeFamilies.map(f => f.id));
-    
-    const selected = [...this.selectedFamilyIds].filter(id => activeFamilyIds.has(id));
-    const filteredRows = this.rows.filter((r) => this.selectedFamilyIds.has(r.familyId) && activeFamilyIds.has(r.familyId));
-    
-    const activeTree = buildTree(activeFamilies);
-    const tree = this.applyCheckedState(activeTree);
+    const activeFamilies = filterFamiliesByFileMode(this.families, this.fileMode);
+    const activeFamilyIds = new Set(activeFamilies.map((f) => f.id));
+    const selected = [...this.selectedFamilyIds].filter((id) => activeFamilyIds.has(id));
+    const filteredRows = this.rows.filter(
+      (r) => this.selectedFamilyIds.has(r.familyId) && activeFamilyIds.has(r.familyId)
+    );
+    const locales = localesFromFamilies(activeFamilies);
+    const tree = this.applyCheckedState(buildTree(activeFamilies));
 
     return {
-      families: this.families,
       families: activeFamilies,
       rows: filteredRows,
-      locales: this.locales,
+      locales,
       tree,
       selectedFamilyIds: selected,
-      visibleLocales: this.visibleLocales,
+      visibleLocales: mergeVisibleLocales(this.visibleLocales, locales),
       settings: this.settings,
       language,
       version: EXTENSION_VERSION,
@@ -401,7 +401,7 @@ export class ResourceIndex {
       return;
     }
     let finalKey = key.trim();
-    const isJson = family.basePath.toLowerCase().endsWith('.json') || family.basePath.toLowerCase().endsWith('.i18n');
+    const isJson = isI18nFamily(family);
     if (!finalKey && this.settings.keyNaming === 'pascalFromNeutral' && !isJson) {
       finalKey = toPascalCaseKey(neutralValue);
     }
@@ -510,7 +510,8 @@ export class ResourceIndex {
     const doc = await vscode.workspace.openTextDocument(filePath);
     const editor = await vscode.window.showTextDocument(doc, { preview: true });
     const text = doc.getText();
-    const needle = `name="${key}"`;
+    const leaf = key.includes('.') ? key.slice(key.lastIndexOf('.') + 1) : key;
+    const needle = isI18nFilePath(filePath) ? `"${leaf}"` : `name="${key}"`;
     const idx = text.indexOf(needle);
     if (idx >= 0) {
       const pos = doc.positionAt(idx);
@@ -520,14 +521,16 @@ export class ResourceIndex {
   }
 
   getExcelPayload(): ExcelWorkbookPayload {
+    const activeFamilies = filterFamiliesByFileMode(this.families, this.fileMode);
+    const activeIds = new Set(activeFamilies.map((f) => f.id));
     const ids =
       this.selectedFamilyIds.size > 0
-        ? this.selectedFamilyIds
-        : new Set(this.families.map((f) => f.id));
+        ? new Set([...this.selectedFamilyIds].filter((id) => activeIds.has(id)))
+        : activeIds;
     return buildExcelPayload(
       this.families.filter((f) => ids.has(f.id)),
       this.rows.filter((r) => ids.has(r.familyId)),
-      this.locales
+      localesFromFamilies(this.families.filter((f) => ids.has(f.id)))
     );
   }
 
@@ -648,14 +651,19 @@ export class ResourceIndex {
     if (this.rows.some((row) => row.familyId === family.id && row.key === key)) {
       return true;
     }
-    const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-    const cached = this.fileCache.get(path.normalize(filePath));
-    return cached?.entries.some((entry) => entry.key === key) ?? false;
+    for (const filePath of Object.values(family.files)) {
+      const cached = this.fileCache.get(path.normalize(filePath));
+      if (cached?.entries.some((entry) => entry.key === key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async maybeUpdateDesigner(family: ResxFamily): Promise<void> {
-    const isJson = family.basePath.toLowerCase().endsWith('.json') || family.basePath.toLowerCase().endsWith('.i18n');
-    if (isJson) return;
+    if (isI18nFamily(family)) {
+      return;
+    }
 
     const neutralPath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     const files: ResxFile[] = [];
@@ -857,12 +865,11 @@ export class ResourceIndex {
     if (!locale) {
       return basePath;
     }
-    const isI18n = basePath.toLowerCase().endsWith('.json') || basePath.toLowerCase().endsWith('.i18n');
-    const ext = basePath.toLowerCase().endsWith('.json') ? 'json' : 'i18n';
+    const ext = i18nExtensionOf(basePath);
     const identity = resolveResxIdentity(basePath);
-    if (isI18n) {
-      // For i18n/json, structure is [familyDir]/[locale]/[baseName].[ext]
-      return path.join(identity.familyDir, locale, `${identity.baseName}.${ext}`);
+    if (ext) {
+      const baseName = identity.baseName || path.basename(basePath, `.${ext}`);
+      return path.join(identity.familyDir || path.dirname(path.dirname(basePath)), locale, `${baseName}.${ext}`);
     }
 
     const dir = path.dirname(basePath);

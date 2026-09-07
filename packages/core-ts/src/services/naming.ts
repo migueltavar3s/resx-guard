@@ -37,13 +37,12 @@ export function resolveResxIdentity(filePath: string, allNormalizedPaths?: Set<s
   const slash = normalized.lastIndexOf('/');
   const fileName = slash >= 0 ? normalized.slice(slash + 1) : normalized;
   const dir = slash >= 0 ? normalized.slice(0, slash) : '';
-  
-  if (fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.i18n')) {
-    const extLen = fileName.toLowerCase().endsWith('.json') ? 5 : 5;
-    const base = fileName.slice(0, -extLen);
+
+  const i18nExt = i18nExtensionOf(fileName);
+  if (i18nExt) {
+    const base = fileName.slice(0, -(i18nExt.length + 1));
     const parentName = dir.slice(dir.lastIndexOf('/') + 1);
     const parentCulture = canonicalizeCulture(parentName);
-    
     if (parentCulture) {
       const familyDir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
       return { locale: parentCulture, baseName: base, familyDir };
@@ -101,6 +100,154 @@ function cultureFromResourceBase(
     }
   }
   return { locale, baseName: base.slice(0, lastDot) };
+}
+
+const CONFIG_JSON_NAMES = new Set([
+  'package.json',
+  'package-lock.json',
+  'npm-shrinkwrap.json',
+  'tsconfig.json',
+  'jsconfig.json',
+  'project.json',
+  'composer.json',
+  'turbo.json',
+  'nx.json',
+  'lerna.json',
+  'angular.json',
+  'nest-cli.json',
+  'appsettings.json',
+  'launch.json',
+  'settings.json',
+  'tasks.json',
+  'extensions.json',
+  'manifest.json',
+  'components.json',
+  'vercel.json',
+  'firebase.json',
+  'typedoc.json',
+  'cypress.json',
+  'resources.json',
+  'cto-files.json',
+]);
+
+const I18N_DIR_NAMES = new Set([
+  'locales',
+  'locale',
+  'i18n',
+  'lang',
+  'langs',
+  'languages',
+  'l10n',
+  'translations',
+]);
+
+function fileNameOf(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/');
+  const slash = normalized.lastIndexOf('/');
+  return slash >= 0 ? normalized.slice(slash + 1) : normalized;
+}
+
+export function i18nExtensionOf(filePath: string): 'json' | 'i18n' | null {
+  const fileName = fileNameOf(filePath).toLowerCase();
+  if (fileName.endsWith('.json')) {
+    return 'json';
+  }
+  if (fileName.endsWith('.i18n')) {
+    return 'i18n';
+  }
+  return null;
+}
+
+export function isI18nFilePath(filePath: string): boolean {
+  return i18nExtensionOf(filePath) !== null;
+}
+
+function isConfigJsonFileName(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  if (CONFIG_JSON_NAMES.has(lower)) {
+    return true;
+  }
+  if (lower.startsWith('.')) {
+    return true;
+  }
+  if (lower.startsWith('tsconfig.') && lower.endsWith('.json')) {
+    return true;
+  }
+  if (lower.startsWith('jsconfig.') && lower.endsWith('.json')) {
+    return true;
+  }
+  if (lower.startsWith('appsettings.') && lower.endsWith('.json')) {
+    return true;
+  }
+  return false;
+}
+
+function hasI18nLocaleSibling(
+  normalizedPath: string,
+  fileName: string,
+  familyDir: string,
+  locale: string,
+  allNormalizedPaths: Set<string>
+): boolean {
+  const prefix = normalizePathKey(familyDir ? `${familyDir}/` : '');
+  const suffix = `/${fileName.toLowerCase()}`;
+  const self = normalizePathKey(normalizedPath);
+  for (const other of allNormalizedPaths) {
+    if (other === self || !other.endsWith(suffix)) {
+      continue;
+    }
+    if (prefix && !other.startsWith(prefix)) {
+      continue;
+    }
+    const rest = prefix ? other.slice(prefix.length) : other;
+    const otherParent = rest.split('/')[0] ?? '';
+    const otherCulture = canonicalizeCulture(otherParent);
+    if (otherCulture && otherCulture !== locale) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True when a .json/.i18n file lives in a locale folder and is not a known config file.
+ * Ambiguous folder names like `ts`/`cs` only count inside typical i18n directories,
+ * or when a sibling locale file with the same name exists.
+ */
+export function isI18nResourcePath(filePath: string, allNormalizedPaths?: Set<string>): boolean {
+  if (!isI18nFilePath(filePath)) {
+    return false;
+  }
+  const fileName = fileNameOf(filePath);
+  if (isConfigJsonFileName(fileName)) {
+    return false;
+  }
+  const normalized = filePath.replace(/\\/g, '/');
+  const slash = normalized.lastIndexOf('/');
+  if (slash < 0) {
+    return false;
+  }
+  const dir = normalized.slice(0, slash);
+  const parentName = dir.slice(dir.lastIndexOf('/') + 1);
+  const parentCulture = canonicalizeCulture(parentName);
+  if (!parentCulture) {
+    return false;
+  }
+
+  const familyDir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
+  const familyDirName = familyDir.slice(familyDir.lastIndexOf('/') + 1);
+  const lang = parentCulture.split('-')[0]?.toLowerCase() ?? '';
+  if (AMBIGUOUS_LANG.has(lang) && !I18N_DIR_NAMES.has(familyDirName.toLowerCase())) {
+    if (!allNormalizedPaths) {
+      return false;
+    }
+    return hasI18nLocaleSibling(normalized, fileName, familyDir, parentCulture, allNormalizedPaths);
+  }
+  return true;
+}
+
+export function isI18nFamily(family: { basePath: string }): boolean {
+  return isI18nFilePath(family.basePath);
 }
 
 export function canonicalizeCulture(raw: string): string | null {

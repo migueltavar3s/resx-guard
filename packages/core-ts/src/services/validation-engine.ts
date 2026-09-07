@@ -9,6 +9,7 @@ import type {
 import { NEUTRAL_LOCALE } from '../models/types';
 import {
   endingsMatch,
+  isI18nFamily,
   placeholdersMatch,
   toPascalCaseKey,
 } from './naming';
@@ -36,7 +37,7 @@ export function validateFamily(
     byLocale.set(f.locale, f);
   }
   
-  const isJson = family.basePath.toLowerCase().endsWith('.json') || family.basePath.toLowerCase().endsWith('.i18n');
+  const isJson = isI18nFamily(family);
 
   const neutral = byLocale.get(NEUTRAL_LOCALE) ?? files[0];
   if (!neutral) {

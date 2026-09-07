@@ -38,14 +38,16 @@ Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, inst
 
 ## Additional Support for JSON (i18n)
 
-While ResX Guard is primarily designed as a core tool for C# `.resx` XML files, it also offers **additional support** for nested JSON translation files (commonly used in web frontend workflows).
+While ResX Guard is primarily designed as a core tool for C# `.resx` XML files, the **VS Code** extension also offers **additional support** for nested JSON translation files (commonly used in web frontend workflows). Visual Studio continues to manage `.resx` only.
 
 **Considerations and Limitations:**
 - **File Structure Requirement:** JSON files must be located directly inside a folder named after a valid language locale code (e.g., `locales/en/translation.json`, `locales/pt/translation.json`).
 - **Namespacing:** The filename (e.g., `translation`) acts as the resource namespace family.
 - **Flattened Keys:** Nested JSON objects are automatically flattened into dot-notation keys (e.g., `navigation.dashboard`) for grid editing, and correctly unflattened back to deeply nested JSON upon saving.
-- **Comments:** Standard JSON does not support comments, so the comment field is disabled when editing these files.
-- **File Types:** The workspace scanner looks for both `.json` and `.i18n` file extensions inside valid locale folders.
+- **Comments:** Standard JSON does not support comments, so comments are not stored for these files.
+- **Ignored files:** Config JSON such as `package.json` and `tsconfig.json` is skipped, even if it happens to sit under a folder named like a locale (`cs`, `ts`, …).
+- **Validation:** PascalCase key naming is not applied to JSON families; placeholder and missing-translation checks still run.
+- **File Types:** The workspace scanner looks for both `.json` and `.i18n` file extensions inside valid locale folders. The Activity Bar can filter the tree to `.resx`, JSON, or both.
 
 *Note: This is provided as a quality-of-life feature to bridge frontend web translations and C# backend `.resx` workflows in the same editor, but it is not intended to support all arbitrary i18n JSON structures.*
 

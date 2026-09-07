@@ -1,6 +1,7 @@
 import * as path from 'path';
-import type { ResxFamily, TreeNode } from '../models/types';
-import { normalizePathKey, resolveResxIdentity } from './naming';
+import type { ResxFamily, ResourceFileMode, TreeNode } from '../models/types';
+import { NEUTRAL_LOCALE } from '../models/types';
+import { isI18nFamily, isI18nFilePath, isI18nResourcePath, normalizePathKey, resolveResxIdentity } from './naming';
 
 export interface ScannedWorkspace {
   families: ResxFamily[];
@@ -21,6 +22,9 @@ export function groupResxFiles(
   const allNormalizedPaths = new Set(files.map((f) => normalizePathKey(f)));
 
   for (const filePath of files) {
+    if (isI18nFilePath(filePath) && !isI18nResourcePath(filePath, allNormalizedPaths)) {
+      continue;
+    }
     const normalized = path.normalize(filePath);
     const identity = resolveResxIdentity(filePath, allNormalizedPaths);
     const familyKey = `${normalizePathKey(identity.familyDir)}||${identity.baseName.toLowerCase()}`;
@@ -72,6 +76,37 @@ export function groupResxFiles(
   );
 
   return { families, tree: buildTree(families) };
+}
+
+export function filterFamiliesByFileMode(
+  families: ResxFamily[],
+  mode: ResourceFileMode
+): ResxFamily[] {
+  if (mode === 'resx') {
+    return families.filter((family) => !isI18nFamily(family));
+  }
+  if (mode === 'json') {
+    return families.filter(isI18nFamily);
+  }
+  return families;
+}
+
+export function localesFromFamilies(families: ResxFamily[]): string[] {
+  const set = new Set<string>();
+  for (const family of families) {
+    for (const locale of Object.keys(family.files)) {
+      set.add(locale);
+    }
+  }
+  return [...set].sort((a, b) => {
+    if (a === NEUTRAL_LOCALE) {
+      return -1;
+    }
+    if (b === NEUTRAL_LOCALE) {
+      return 1;
+    }
+    return a.localeCompare(b);
+  });
 }
 
 function resolveProjectName(
