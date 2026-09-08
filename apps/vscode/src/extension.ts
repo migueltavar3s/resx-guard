@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { isI18nFilePath, isI18nResourcePath } from '@resx-guard/core-ts';
 import { ResourceIndex } from './services/resource-index';
 import { ResxGuardPanel, ResxGuardSidebarProvider } from './panel/resx-guard-panel';
 
@@ -11,10 +12,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   index = new ResourceIndex(context, diagnostics);
   await index.initialize();
 
-  const openPanel = () => {
+  const openPanel = (mode: 'all' | 'resx' | 'json' = 'all') => {
     if (!index) {
       return;
     }
+    index.setFileMode(mode);
     ResxGuardPanel.show(context.extensionUri, index);
   };
 
@@ -39,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.registerWebviewViewProvider('resxGuard.sidebar', sidebar)
   );
 
-  const watcher = vscode.workspace.createFileSystemWatcher('**/*.resx');
+  const watcher = vscode.workspace.createFileSystemWatcher('**/*.{resx,json,i18n}');
   context.subscriptions.push(watcher);
 
   const usageWatcher = vscode.workspace.createFileSystemWatcher(
@@ -83,10 +85,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   watcher.onDidChange((uri) => {
     void index?.refreshFile(uri.fsPath);
   });
-  watcher.onDidCreate(() => {
+  watcher.onDidCreate((uri) => {
+    if (isI18nFilePath(uri.fsPath) && !isI18nResourcePath(uri.fsPath)) {
+      return;
+    }
     scheduleRescan();
   });
-  watcher.onDidDelete(() => {
+  watcher.onDidDelete((uri) => {
+    if (isI18nFilePath(uri.fsPath) && !isI18nResourcePath(uri.fsPath)) {
+      return;
+    }
     scheduleRescan();
   });
 

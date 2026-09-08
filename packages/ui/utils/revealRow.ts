@@ -1,13 +1,15 @@
-import { toPascalCaseKey, type ResourceRow } from '@resx-guard/core-ts';
+import { isI18nFamily, toCamelCaseKey, toPascalCaseKey, type ResxFamily, type ResourceRow } from '@resx-guard/core-ts';
 
 export function resolveAddedKey(
   key: string,
   neutralValue: string,
-  keyNaming: 'pascalFromNeutral' | 'manual'
+  keyNaming: 'pascalFromNeutral' | 'manual',
+  family?: ResxFamily
 ): string {
   let finalKey = key.trim();
   if (!finalKey && keyNaming === 'pascalFromNeutral') {
-    finalKey = toPascalCaseKey(neutralValue);
+    finalKey =
+      family && isI18nFamily(family) ? toCamelCaseKey(neutralValue) : toPascalCaseKey(neutralValue);
   }
   return finalKey || 'NewKey';
 }

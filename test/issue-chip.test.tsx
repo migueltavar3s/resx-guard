@@ -72,7 +72,7 @@ describe('SettingsPage naming suggestions', () => {
     const card = getByText('Key naming').closest('.setting-card');
     expect(card).toBeTruthy();
     expect(within(card as HTMLElement).getByText('Show naming suggestions')).toBeTruthy();
-    expect(within(card as HTMLElement).getByText('PascalCase from English')).toBeTruthy();
+    expect(within(card as HTMLElement).getByText('From English (PascalCase / camelCase)')).toBeTruthy();
   });
 
   it('hides naming suggestions and the PascalCase rule when keys are typed manually', () => {
@@ -84,7 +84,9 @@ describe('SettingsPage naming suggestions', () => {
       />
     );
     expect(queryByText('Show naming suggestions')).toBeNull();
-    expect(queryByText('Key must be PascalCase of neutral value')).toBeNull();
+    expect(
+      queryByText('Key must match naming from neutral value (.resx PascalCase / JSON camelCase leaf)')
+    ).toBeNull();
     expect(getByText('Type the key myself')).toBeTruthy();
   });
 });

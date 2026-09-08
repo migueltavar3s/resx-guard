@@ -37,6 +37,18 @@ export function resolveResxIdentity(filePath: string, allNormalizedPaths?: Set<s
   const slash = normalized.lastIndexOf('/');
   const fileName = slash >= 0 ? normalized.slice(slash + 1) : normalized;
   const dir = slash >= 0 ? normalized.slice(0, slash) : '';
+
+  const i18nExt = i18nExtensionOf(fileName);
+  if (i18nExt) {
+    const base = fileName.slice(0, -(i18nExt.length + 1));
+    const parentName = dir.slice(dir.lastIndexOf('/') + 1);
+    const parentCulture = canonicalizeCulture(parentName);
+    if (parentCulture) {
+      const familyDir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
+      return { locale: parentCulture, baseName: base, familyDir };
+    }
+  }
+
   const base = fileName.replace(/\.resx$/i, '');
 
   const suffix = cultureFromResourceBase(base, dir, allNormalizedPaths);
@@ -90,6 +102,154 @@ function cultureFromResourceBase(
   return { locale, baseName: base.slice(0, lastDot) };
 }
 
+const CONFIG_JSON_NAMES = new Set([
+  'package.json',
+  'package-lock.json',
+  'npm-shrinkwrap.json',
+  'tsconfig.json',
+  'jsconfig.json',
+  'project.json',
+  'composer.json',
+  'turbo.json',
+  'nx.json',
+  'lerna.json',
+  'angular.json',
+  'nest-cli.json',
+  'appsettings.json',
+  'launch.json',
+  'settings.json',
+  'tasks.json',
+  'extensions.json',
+  'manifest.json',
+  'components.json',
+  'vercel.json',
+  'firebase.json',
+  'typedoc.json',
+  'cypress.json',
+  'resources.json',
+  'cto-files.json',
+]);
+
+const I18N_DIR_NAMES = new Set([
+  'locales',
+  'locale',
+  'i18n',
+  'lang',
+  'langs',
+  'languages',
+  'l10n',
+  'translations',
+]);
+
+function fileNameOf(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/');
+  const slash = normalized.lastIndexOf('/');
+  return slash >= 0 ? normalized.slice(slash + 1) : normalized;
+}
+
+export function i18nExtensionOf(filePath: string): 'json' | 'i18n' | null {
+  const fileName = fileNameOf(filePath).toLowerCase();
+  if (fileName.endsWith('.json')) {
+    return 'json';
+  }
+  if (fileName.endsWith('.i18n')) {
+    return 'i18n';
+  }
+  return null;
+}
+
+export function isI18nFilePath(filePath: string): boolean {
+  return i18nExtensionOf(filePath) !== null;
+}
+
+function isConfigJsonFileName(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  if (CONFIG_JSON_NAMES.has(lower)) {
+    return true;
+  }
+  if (lower.startsWith('.')) {
+    return true;
+  }
+  if (lower.startsWith('tsconfig.') && lower.endsWith('.json')) {
+    return true;
+  }
+  if (lower.startsWith('jsconfig.') && lower.endsWith('.json')) {
+    return true;
+  }
+  if (lower.startsWith('appsettings.') && lower.endsWith('.json')) {
+    return true;
+  }
+  return false;
+}
+
+function hasI18nLocaleSibling(
+  normalizedPath: string,
+  fileName: string,
+  familyDir: string,
+  locale: string,
+  allNormalizedPaths: Set<string>
+): boolean {
+  const prefix = normalizePathKey(familyDir ? `${familyDir}/` : '');
+  const suffix = `/${fileName.toLowerCase()}`;
+  const self = normalizePathKey(normalizedPath);
+  for (const other of allNormalizedPaths) {
+    if (other === self || !other.endsWith(suffix)) {
+      continue;
+    }
+    if (prefix && !other.startsWith(prefix)) {
+      continue;
+    }
+    const rest = prefix ? other.slice(prefix.length) : other;
+    const otherParent = rest.split('/')[0] ?? '';
+    const otherCulture = canonicalizeCulture(otherParent);
+    if (otherCulture && otherCulture !== locale) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True when a .json/.i18n file lives in a locale folder and is not a known config file.
+ * Ambiguous folder names like `ts`/`cs` only count inside typical i18n directories,
+ * or when a sibling locale file with the same name exists.
+ */
+export function isI18nResourcePath(filePath: string, allNormalizedPaths?: Set<string>): boolean {
+  if (!isI18nFilePath(filePath)) {
+    return false;
+  }
+  const fileName = fileNameOf(filePath);
+  if (isConfigJsonFileName(fileName)) {
+    return false;
+  }
+  const normalized = filePath.replace(/\\/g, '/');
+  const slash = normalized.lastIndexOf('/');
+  if (slash < 0) {
+    return false;
+  }
+  const dir = normalized.slice(0, slash);
+  const parentName = dir.slice(dir.lastIndexOf('/') + 1);
+  const parentCulture = canonicalizeCulture(parentName);
+  if (!parentCulture) {
+    return false;
+  }
+
+  const familyDir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
+  const familyDirName = familyDir.slice(familyDir.lastIndexOf('/') + 1);
+  const lang = parentCulture.split('-')[0]?.toLowerCase() ?? '';
+  if (AMBIGUOUS_LANG.has(lang) && !I18N_DIR_NAMES.has(familyDirName.toLowerCase())) {
+    if (!allNormalizedPaths) {
+      return false;
+    }
+    return hasI18nLocaleSibling(normalized, fileName, familyDir, parentCulture, allNormalizedPaths);
+  }
+  return true;
+}
+
+export function isI18nFamily(family: { basePath: string }): boolean {
+  return isI18nFilePath(family.basePath);
+}
+
 export function canonicalizeCulture(raw: string): string | null {
   if (!raw) {
     return null;
@@ -122,6 +282,7 @@ export function normalizePathKey(filePath: string): string {
 /**
  * Convert a human string into a PascalCase C# identifier.
  * "Invalid resource file:" → "InvalidResourceFile"
+ * Placeholders like {0} / {name} are ignored so they do not become "Hello0".
  */
 export function toPascalCaseKey(input: string): string {
   if (!input) {
@@ -131,6 +292,7 @@ export function toPascalCaseKey(input: string): string {
   const cleaned = input
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\{[^{}]+\}/g, ' ')
     .replace(/[''`´]/g, '')
     .replace(/[^a-zA-Z0-9]+/g, ' ')
     .trim();
@@ -149,6 +311,34 @@ export function toPascalCaseKey(input: string): string {
   }
 
   return result;
+}
+
+/**
+ * Convert a human string into a camelCase i18n leaf identifier.
+ * "Open settings" → "openSettings"
+ */
+export function toCamelCaseKey(input: string): string {
+  const pascal = toPascalCaseKey(input);
+  if (!pascal) {
+    return '';
+  }
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+/**
+ * Suggested key for nested JSON i18n: keep the dotted path, replace only the leaf.
+ * `welcome.message` + "Welcome to ResX Guard" → `welcome.welcomeToResXGuard`
+ */
+export function suggestedI18nKey(currentKey: string, neutralValue: string): string {
+  const leaf = toCamelCaseKey(neutralValue);
+  if (!leaf) {
+    return '';
+  }
+  const lastDot = currentKey.lastIndexOf('.');
+  if (lastDot > 0) {
+    return `${currentKey.slice(0, lastDot)}.${leaf}`;
+  }
+  return leaf;
 }
 
 /** Extract format placeholders like {0}, {1}, {name}. */

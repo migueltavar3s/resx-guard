@@ -1,0 +1,7 @@
+{
+  "navigation": {
+    "dashboard": "Painel",
+    "settings": "Definições"
+  },
+  "hello": "Olá {0}"
+}

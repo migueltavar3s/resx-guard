@@ -1,6 +1,9 @@
 /** Neutral/uncultured locale key used for base .resx files. */
 export const NEUTRAL_LOCALE = '';
 
+/** Which resource families the VS Code host shows in the tree and grid. */
+export type ResourceFileMode = 'all' | 'resx' | 'json';
+
 export type IssueSeverity = 'warning' | 'error' | 'hint' | 'info';
 
 export type IssueRule =
@@ -17,7 +20,7 @@ export interface ValidationIssue {
   locale?: string;
   key: string;
   familyId: string;
-  /** PascalCase key suggestion for `keyPascalCase` issues. */
+  /** Key suggestion for naming issues (PascalCase for .resx, camelCase leaf for JSON). */
   suggestedKey?: string;
 }
 

@@ -1,0 +1,23 @@
+{
+  "welcome": {
+    "message": "Welcome to ResX Guard"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "openSettings": "Open settings",
+    "saveChanges": "Save changes",
+    "deleteFile": "Delete file?"
+  },
+  "items": {
+    "found": "{0} items found",
+    "foundBad": "{0} items found"
+  },
+  "confirms": "Confirms",
+  "helpHint": "Press F1 for help",
+  "importFailed": "Import failed: {0}",
+  "exportComplete": "Export completed successfully.",
+  "untitled_key": "untitled",
+  "addressLine": "Line one\nLine two",
+  "projectHasNoResourceFile": "Project has no resource file",
+  "longKeyThatShouldNotBreakTheSummaryPanelLayoutWhenDisplayed": "A very long key for layout testing"
+}

@@ -3,6 +3,7 @@ import * as path from 'path';
 import type {
   ExtensionSettings,
   IndexSnapshot,
+  ResourceFileMode,
   ResxFamily,
   ResxFile,
   ResourceRow,
@@ -17,6 +18,11 @@ import {
   renameResxKey,
   setResxComment,
   setResxValue,
+  parseI18nFile,
+  addI18nEntry,
+  deleteI18nEntry,
+  renameI18nKey,
+  setI18nValue,
   groupResxFiles,
   attachIssuesToRows,
   buildRows,
@@ -27,6 +33,7 @@ import {
   resolveDesignerMeta,
   writeDesignerCs,
   resolveResxIdentity,
+  toCamelCaseKey,
   toPascalCaseKey,
   mergeVisibleLocales,
   buildExcelPayload,
@@ -35,6 +42,14 @@ import {
   resolveFamilyForImport,
   UsageIndex,
   isUsageSourcePath,
+  buildTree,
+  filterFamiliesByFileMode,
+  i18nExtensionOf,
+  isI18nFamily,
+  isI18nFilePath,
+  isI18nResourcePath,
+  localesFromFamilies,
+  normalizePathKey,
   type ExcelWorkbookPayload,
 } from '@resx-guard/core-ts';
 
@@ -52,6 +67,7 @@ export class ResourceIndex {
   readonly onDidChange = this.onDidChangeEmitter.event;
   private updatingFromUs = false;
   private readonly usageIndex = new UsageIndex();
+  private fileMode: ResourceFileMode = 'all';
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -60,6 +76,48 @@ export class ResourceIndex {
 
   get isUpdatingFromUs(): boolean {
     return this.updatingFromUs;
+  }
+
+  private parseFile(filePath: string) {
+    if (isI18nFilePath(filePath)) {
+      return parseI18nFile(filePath);
+    }
+    return parseResxFile(filePath);
+  }
+
+  private async setFileValue(filePath: string, key: string, value: string) {
+    if (isI18nFilePath(filePath)) {
+      return setI18nValue(filePath, key, value);
+    }
+    return setResxValue(filePath, key, value);
+  }
+
+  private async addFileEntry(filePath: string, key: string, value: string, comment = '') {
+    if (isI18nFilePath(filePath)) {
+      return addI18nEntry(filePath, key, value);
+    }
+    return addResxEntry(filePath, key, value, comment);
+  }
+
+  private async deleteFileEntry(filePath: string, key: string) {
+    if (isI18nFilePath(filePath)) {
+      return deleteI18nEntry(filePath, key);
+    }
+    return deleteResxEntry(filePath, key);
+  }
+
+  private async renameFileKey(filePath: string, oldKey: string, newKey: string) {
+    if (isI18nFilePath(filePath)) {
+      return renameI18nKey(filePath, oldKey, newKey);
+    }
+    return renameResxKey(filePath, oldKey, newKey);
+  }
+
+  private async setFileComment(filePath: string, key: string, comment: string) {
+    if (isI18nFilePath(filePath)) {
+      return;
+    }
+    return setResxComment(filePath, key, comment);
   }
 
   async refresh(): Promise<void> {
@@ -98,16 +156,19 @@ export class ResourceIndex {
       return;
     }
 
-    const uris: vscode.Uri[] = [];
+    const discovered: string[] = [];
     for (const folder of folders) {
       const found = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(folder, '**/*.resx'),
+        new vscode.RelativePattern(folder, '**/*.{resx,i18n,json}'),
         '{**/node_modules/**,**/bin/**,**/obj/**,**/.git/**}'
       );
-      uris.push(...found);
+      discovered.push(...found.map((u) => u.fsPath));
     }
 
-    const paths = uris.map((u) => u.fsPath);
+    const allNormalized = new Set(discovered.map((p) => normalizePathKey(p)));
+    const paths = discovered.filter(
+      (p) => !isI18nFilePath(p) || isI18nResourcePath(p, allNormalized)
+    );
     const scanned = groupResxFiles(
       paths,
       folders.map((f) => ({ name: f.name, uri: { fsPath: f.uri.fsPath } }))
@@ -119,7 +180,7 @@ export class ResourceIndex {
     await Promise.all(
       paths.map(async (p) => {
         try {
-          const parsed = await parseResxFile(p);
+          const parsed = await this.parseFile(p);
           this.fileCache.set(path.normalize(p), parsed);
         } catch (err) {
           console.error('Failed to parse', p, err);
@@ -162,9 +223,12 @@ export class ResourceIndex {
     if (this.updatingFromUs) {
       return;
     }
+    if (isI18nFilePath(filePath) && !isI18nResourcePath(filePath)) {
+      return;
+    }
     const normalized = path.normalize(filePath);
     try {
-      const parsed = await parseResxFile(normalized);
+      const parsed = await this.parseFile(normalized);
       this.fileCache.set(normalized, parsed);
     } catch {
       this.fileCache.delete(normalized);
@@ -193,18 +257,30 @@ export class ResourceIndex {
     this.onDidChangeEmitter.fire();
   }
 
+  setFileMode(mode: ResourceFileMode) {
+    if (this.fileMode !== mode) {
+      this.fileMode = mode;
+      this.onDidChangeEmitter.fire();
+    }
+  }
+
   getSnapshot(language: string): IndexSnapshot {
-    const selected = [...this.selectedFamilyIds];
-    const filteredRows = this.rows.filter((r) => this.selectedFamilyIds.has(r.familyId));
-    const tree = this.applyCheckedState(this.tree);
+    const activeFamilies = filterFamiliesByFileMode(this.families, this.fileMode);
+    const activeFamilyIds = new Set(activeFamilies.map((f) => f.id));
+    const selected = [...this.selectedFamilyIds].filter((id) => activeFamilyIds.has(id));
+    const filteredRows = this.rows.filter(
+      (r) => this.selectedFamilyIds.has(r.familyId) && activeFamilyIds.has(r.familyId)
+    );
+    const locales = localesFromFamilies(activeFamilies);
+    const tree = this.applyCheckedState(buildTree(activeFamilies));
 
     return {
-      families: this.families,
+      families: activeFamilies,
       rows: filteredRows,
-      locales: this.locales,
+      locales,
       tree,
       selectedFamilyIds: selected,
-      visibleLocales: this.visibleLocales,
+      visibleLocales: mergeVisibleLocales(this.visibleLocales, locales),
       settings: this.settings,
       language,
       version: EXTENSION_VERSION,
@@ -277,8 +353,8 @@ export class ResourceIndex {
 
     this.updatingFromUs = true;
     try {
-      await setResxValue(filePath, key, value);
-      const parsed = await parseResxFile(filePath);
+      await this.setFileValue(filePath, key, value);
+      const parsed = await this.parseFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
       if (!this.locales.includes(locale)) {
         this.collectLocales();
@@ -308,8 +384,8 @@ export class ResourceIndex {
     const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     this.updatingFromUs = true;
     try {
-      await setResxComment(filePath, key, comment);
-      const parsed = await parseResxFile(filePath);
+      await this.setFileComment(filePath, key, comment);
+      const parsed = await this.parseFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
     } finally {
       setTimeout(() => {
@@ -326,8 +402,9 @@ export class ResourceIndex {
       return;
     }
     let finalKey = key.trim();
+    const isJson = isI18nFamily(family);
     if (!finalKey && this.settings.keyNaming === 'pascalFromNeutral') {
-      finalKey = toPascalCaseKey(neutralValue);
+      finalKey = isJson ? toCamelCaseKey(neutralValue) : toPascalCaseKey(neutralValue);
     }
     if (!finalKey) {
       finalKey = 'NewKey';
@@ -339,16 +416,16 @@ export class ResourceIndex {
     const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     this.updatingFromUs = true;
     try {
-      await addResxEntry(filePath, finalKey, neutralValue);
-      const parsed = await parseResxFile(filePath);
+      await this.addFileEntry(filePath, finalKey, neutralValue);
+      const parsed = await this.parseFile(filePath);
       this.fileCache.set(path.normalize(filePath), parsed);
 
       for (const [locale, satellitePath] of Object.entries(family.files)) {
         if (locale === NEUTRAL_LOCALE || satellitePath === filePath) {
           continue;
         }
-        await addResxEntry(satellitePath, finalKey, '');
-        const satellite = await parseResxFile(satellitePath);
+        await this.addFileEntry(satellitePath, finalKey, '');
+        const satellite = await this.parseFile(satellitePath);
         this.fileCache.set(path.normalize(satellitePath), satellite);
       }
     } finally {
@@ -372,9 +449,9 @@ export class ResourceIndex {
     this.updatingFromUs = true;
     try {
       for (const filePath of Object.values(family.files)) {
-        await deleteResxEntry(filePath, key);
+        await this.deleteFileEntry(filePath, key);
         try {
-          const parsed = await parseResxFile(filePath);
+          const parsed = await this.parseFile(filePath);
           this.fileCache.set(path.normalize(filePath), parsed);
         } catch {
           /* ignore */
@@ -404,9 +481,9 @@ export class ResourceIndex {
     this.updatingFromUs = true;
     try {
       for (const filePath of Object.values(family.files)) {
-        await renameResxKey(filePath, oldKey, trimmed);
+        await this.renameFileKey(filePath, oldKey, trimmed);
         try {
-          const parsed = await parseResxFile(filePath);
+          const parsed = await this.parseFile(filePath);
           this.fileCache.set(path.normalize(filePath), parsed);
         } catch {
           /* ignore */
@@ -434,7 +511,8 @@ export class ResourceIndex {
     const doc = await vscode.workspace.openTextDocument(filePath);
     const editor = await vscode.window.showTextDocument(doc, { preview: true });
     const text = doc.getText();
-    const needle = `name="${key}"`;
+    const leaf = key.includes('.') ? key.slice(key.lastIndexOf('.') + 1) : key;
+    const needle = isI18nFilePath(filePath) ? `"${leaf}"` : `name="${key}"`;
     const idx = text.indexOf(needle);
     if (idx >= 0) {
       const pos = doc.positionAt(idx);
@@ -444,14 +522,16 @@ export class ResourceIndex {
   }
 
   getExcelPayload(): ExcelWorkbookPayload {
+    const activeFamilies = filterFamiliesByFileMode(this.families, this.fileMode);
+    const activeIds = new Set(activeFamilies.map((f) => f.id));
     const ids =
       this.selectedFamilyIds.size > 0
-        ? this.selectedFamilyIds
-        : new Set(this.families.map((f) => f.id));
+        ? new Set([...this.selectedFamilyIds].filter((id) => activeIds.has(id)))
+        : activeIds;
     return buildExcelPayload(
       this.families.filter((f) => ids.has(f.id)),
       this.rows.filter((r) => ids.has(r.familyId)),
-      this.locales
+      localesFromFamilies(this.families.filter((f) => ids.has(f.id)))
     );
   }
 
@@ -486,7 +566,7 @@ export class ResourceIndex {
           await this.mergeKeyValues(family, key, values);
           if (row.comment) {
             const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-            await setResxComment(filePath, key, row.comment);
+            await this.setFileComment(filePath, key, row.comment);
           }
           updated += 1;
         }
@@ -521,13 +601,13 @@ export class ResourceIndex {
   ): Promise<void> {
     const locales = new Set([...Object.keys(family.files), ...Object.keys(values)]);
     const neutralPath = this.ensureLocalePath(family, NEUTRAL_LOCALE);
-    await addResxEntry(neutralPath, key, values[NEUTRAL_LOCALE] ?? '', comment);
+    await this.addFileEntry(neutralPath, key, values[NEUTRAL_LOCALE] ?? '', comment);
     for (const locale of locales) {
       if (locale === NEUTRAL_LOCALE) {
         continue;
       }
       const filePath = this.ensureLocalePath(family, locale);
-      await addResxEntry(filePath, key, values[locale] ?? '');
+      await this.addFileEntry(filePath, key, values[locale] ?? '');
     }
   }
 
@@ -541,7 +621,7 @@ export class ResourceIndex {
         continue;
       }
       const filePath = this.ensureLocalePath(family, locale);
-      await setResxValue(filePath, key, value);
+      await this.setFileValue(filePath, key, value);
     }
   }
 
@@ -560,7 +640,7 @@ export class ResourceIndex {
   private async reloadFamilyFiles(family: ResxFamily): Promise<void> {
     for (const filePath of Object.values(family.files)) {
       try {
-        const parsed = await parseResxFile(filePath);
+        const parsed = await this.parseFile(filePath);
         this.fileCache.set(path.normalize(filePath), parsed);
       } catch {
         /* ignore */
@@ -572,12 +652,20 @@ export class ResourceIndex {
     if (this.rows.some((row) => row.familyId === family.id && row.key === key)) {
       return true;
     }
-    const filePath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
-    const cached = this.fileCache.get(path.normalize(filePath));
-    return cached?.entries.some((entry) => entry.key === key) ?? false;
+    for (const filePath of Object.values(family.files)) {
+      const cached = this.fileCache.get(path.normalize(filePath));
+      if (cached?.entries.some((entry) => entry.key === key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async maybeUpdateDesigner(family: ResxFamily): Promise<void> {
+    if (isI18nFamily(family)) {
+      return;
+    }
+
     const neutralPath = family.files[NEUTRAL_LOCALE] ?? family.basePath;
     const files: ResxFile[] = [];
     for (const [locale, filePath] of Object.entries(family.files)) {
@@ -778,8 +866,14 @@ export class ResourceIndex {
     if (!locale) {
       return basePath;
     }
-    const dir = path.dirname(basePath);
+    const ext = i18nExtensionOf(basePath);
     const identity = resolveResxIdentity(basePath);
+    if (ext) {
+      const baseName = identity.baseName || path.basename(basePath, `.${ext}`);
+      return path.join(identity.familyDir || path.dirname(path.dirname(basePath)), locale, `${baseName}.${ext}`);
+    }
+
+    const dir = path.dirname(basePath);
     if (!identity.baseName) {
       return path.join(dir, `${locale}.resx`);
     }

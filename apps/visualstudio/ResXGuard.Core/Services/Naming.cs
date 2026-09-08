@@ -98,8 +98,10 @@ public static class Naming
     public static string ToPascalCaseKey(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return "";
+        // Drop {0}/{name} placeholders so they do not become Hello0 / FoundCountItems noise.
+        var withoutPlaceholders = PlaceholderRegex.Replace(input, " ");
         var cleaned = Regex.Replace(
-            input.Normalize(NormalizationForm.FormKD).Replace("\u0300", "").Replace("\u0301", ""),
+            withoutPlaceholders.Normalize(NormalizationForm.FormKD).Replace("\u0300", "").Replace("\u0301", ""),
             @"[''`´]", "");
         cleaned = Regex.Replace(cleaned, @"[^a-zA-Z0-9]+", " ").Trim();
         if (string.IsNullOrEmpty(cleaned)) return "";

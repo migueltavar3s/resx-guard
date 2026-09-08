@@ -27,6 +27,19 @@ describe('resolveAddedKey', () => {
     expect(resolveAddedKey('', 'Save failed.', 'pascalFromNeutral')).toBe('SaveFailed');
   });
 
+  it('uses camelCase for JSON i18n families', () => {
+    const jsonFamily = {
+      id: 'json1',
+      basePath: '/app/locales/en/translation.json',
+      displayName: 'locales/translation',
+      projectName: 'web',
+      files: { en: '/app/locales/en/translation.json' },
+    };
+    expect(resolveAddedKey('', 'Open settings', 'pascalFromNeutral', jsonFamily)).toBe(
+      'openSettings'
+    );
+  });
+
   it('falls back to NewKey when nothing can be derived', () => {
     expect(resolveAddedKey('', '', 'manual')).toBe('NewKey');
   });

@@ -1,8 +1,8 @@
 {
   "name": "resx-guard",
   "displayName": "ResX Guard",
-  "description": "Fast, minimalist ResX translation manager for C# projects in VS Code",
-  "version": "0.2.2",
+  "description": "Spreadsheet-style translation manager for .resx and nested JSON i18n in VS Code",
+  "version": "0.2.3",
   "publisher": "migueltavar3s",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -33,6 +33,7 @@
     "resx",
     "localization",
     "i18n",
+    "json",
     "csharp",
     "translation",
     "excel",

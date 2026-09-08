@@ -9,7 +9,9 @@ import type {
 import { NEUTRAL_LOCALE } from '../models/types';
 import {
   endingsMatch,
+  isI18nFamily,
   placeholdersMatch,
+  suggestedI18nKey,
   toPascalCaseKey,
 } from './naming';
 
@@ -35,6 +37,8 @@ export function validateFamily(
   for (const f of files) {
     byLocale.set(f.locale, f);
   }
+  
+  const isJson = isI18nFamily(family);
 
   const neutral = byLocale.get(NEUTRAL_LOCALE) ?? files[0];
   if (!neutral) {
@@ -77,12 +81,16 @@ export function validateFamily(
     const neutralValue = neutralEntry?.value ?? '';
 
     if (rules.keyPascalCase && neutralEntry) {
-      const expected = toPascalCaseKey(neutralValue);
+      const expected = isJson
+        ? suggestedI18nKey(key, neutralValue)
+        : toPascalCaseKey(neutralValue);
       if (expected && key !== expected) {
         issues.push({
           rule: 'keyPascalCase',
           severity: 'warning',
-          message: `Key should be PascalCase of neutral value: expected "${expected}"`,
+          message: isJson
+            ? `Key leaf should be camelCase of neutral value: expected "${expected}"`
+            : `Key should be PascalCase of neutral value: expected "${expected}"`,
           key,
           familyId: family.id,
           suggestedKey: expected,
