@@ -1,53 +1,58 @@
 # ResX Guard
 
-Fast, minimalist ResX translation manager for C# projects in **Visual Studio Code** and **Visual Studio 2022/2026**.
+Spreadsheet-style translation manager for **.resx** and nested **JSON i18n** in **Visual Studio Code**, and for **.resx** in **Visual Studio 2022/2026**.
 
 [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/migueltavar3s.resx-guard?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/migueltavar3s.resx-guard)](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Inspired by Visual Studio ResX Resource Manager — spreadsheet-style grid, instant search, configurable validation, automatic `Resources.Designer.cs` updates, and Excel import/export.
+Inspired by Visual Studio ResX Resource Manager — one grid for keys × languages, search, validation, Excel import/export, and (for C# `.resx`) automatic `Resources.Designer.cs` updates.
 
 **Install (VS Code):** [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=migueltavar3s.resx-guard) · ID `migueltavar3s.resx-guard`
 
+## Supported formats
+
+| Format | Host | Layout |
+|--------|------|--------|
+| **`.resx`** | VS Code + Visual Studio | Classic satellites (`Resources.resx` + `Resources.pt.resx`) or folder cultures |
+| **JSON / `.i18n`** | VS Code only | Nested files under a locale folder, e.g. `locales/en/translation.json` |
+
+In VS Code, the Activity Bar **File Types** filter can show all, `.resx` only, or JSON only — useful when a workspace mixes C# resources and web i18n.
+
 ## Features
 
-- Spreadsheet-style grid: keys × languages
-- File tree with checkboxes to scope which `.resx` families appear
+- Spreadsheet-style grid: keys × languages for every supported family
+- File tree with checkboxes to scope which families appear
 - Choose which language columns to show; **Summary** always lists every locale
 - Fast in-memory search/filter with incremental file refresh
-- Validation rules (PascalCase keys, matching string endings, placeholders, missing translations)
+- Validation: naming from English, matching endings, placeholders, missing translations, duplicates
+- Naming suggestions with **Apply** in the grid (`.resx` → PascalCase; JSON → camelCase leaf, nested path kept)
 - Warnings in the grid, Summary, and Problems / Error List
-- Auto-update `*.Designer.cs` when keys change
+- Auto-update `*.Designer.cs` when `.resx` keys change
 - Import/export Excel (`.xlsx` / `.xls`) for the selected families
 - UI in **English** and **Portuguese**
 
-## Additional Support for JSON (i18n)
+## JSON i18n details (VS Code)
 
-While ResX Guard is primarily designed as a core tool for C# `.resx` XML files, the **VS Code** extension also offers **additional support** for nested JSON translation files (commonly used in web frontend workflows). Visual Studio continues to manage `.resx` only.
+- Files must sit directly in a locale-named folder (`locales/en/translation.json`, `locales/pt/translation.json`, …). Extensions `.json` and `.i18n` are accepted.
+- The filename stem is the family (`translation`); nested objects become dot-keys in the grid (`navigation.dashboard`) and are written back as nested JSON.
+- Config JSON (`package.json`, `tsconfig.json`, …) is ignored even under locale-like folders (`cs`, `ts`, …).
+- Comments are not stored (standard JSON has none).
+- Naming: keep the dotted path; the leaf should be camelCase of the English value. Placeholder and missing-translation checks still apply.
 
-**Considerations and Limitations:**
-- **File Structure Requirement:** JSON files must be located directly inside a folder named after a valid language locale code (e.g., `locales/en/translation.json`, `locales/pt/translation.json`).
-- **Namespacing:** The filename (e.g., `translation`) acts as the resource namespace family.
-- **Flattened Keys:** Nested JSON objects are automatically flattened into dot-notation keys (e.g., `navigation.dashboard`) for grid editing, and correctly unflattened back to deeply nested JSON upon saving.
-- **Comments:** Standard JSON does not support comments, so comments are not stored for these files.
-- **Ignored files:** Config JSON such as `package.json` and `tsconfig.json` is skipped, even if it happens to sit under a folder named like a locale (`cs`, `ts`, …).
-- **Validation:** PascalCase key naming is not applied to JSON families; placeholder and missing-translation checks still run.
-- **File Types:** The workspace scanner looks for both `.json` and `.i18n` file extensions inside valid locale folders. The Activity Bar can filter the tree to `.resx`, JSON, or both.
-
-*Note: This is provided as a quality-of-life feature to bridge frontend web translations and C# backend `.resx` workflows in the same editor, but it is not intended to support all arbitrary i18n JSON structures.*
+*Not every arbitrary i18n JSON layout is supported — only locale-folder nested catalogs like the ones above.*
 
 ## Usage
 
-1. Open a workspace or solution that contains `.resx` files
-2. **VS Code:** run **ResX Guard: Open** from the command palette, or use the Activity Bar icon
-3. **Visual Studio:** open **View → Other Windows → ResX Guard**
-4. Select resource families on the left, edit translations in the grid
-5. Use **Export** / **Import** in the toolbar to round-trip the selected families through Excel. Empty cells on import leave existing translations unchanged.
+1. Open a workspace with `.resx` and/or `locales/<locale>/*.json` (VS Code), or a solution with `.resx` (Visual Studio)
+2. **VS Code:** **ResX Guard: Open** from the command palette, or the Activity Bar icon — optional **File Types** filter
+3. **Visual Studio:** **View → Other Windows → ResX Guard**
+4. Select families on the left, edit in the grid
+5. **Export** / **Import** for Excel round-trips; empty import cells leave existing values unchanged
 
 ## Settings
 
-- **VS Code:** **ResX Guard** in Settings — key naming, Designer.cs generation, validation rules
+- **VS Code:** **ResX Guard** in Settings — key naming, Designer.cs (`.resx`), validation rules
 - **Visual Studio:** **Tools → Options → ResX Guard**
 
 ## Support

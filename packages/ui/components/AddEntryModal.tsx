@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ResxFamily, ResourceRow } from '@resx-guard/core-ts';
+import { isI18nFamily, toCamelCaseKey, toPascalCaseKey, type ResxFamily, type ResourceRow } from '@resx-guard/core-ts';
 import { t } from '../i18n';
 import { FilterSelect } from './FilterSelect';
 
@@ -11,36 +11,22 @@ interface Props {
   onConfirm: (familyId: string, key: string, neutralValue: string) => void;
 }
 
-function toPascalCaseKey(input: string): string {
-  if (!input) {
-    return '';
-  }
-  const cleaned = input
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[''`´]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, ' ')
-    .trim();
-  if (!cleaned) {
-    return '';
-  }
-  const parts = cleaned.split(/\s+/).filter(Boolean);
-  let result = parts
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
-  if (/^[0-9]/.test(result)) {
-    result = 'N' + result;
-  }
-  return result;
-}
-
 export function AddEntryModal({ families, rows, keyNaming, onCancel, onConfirm }: Props) {
   const [familyId, setFamilyId] = useState(families[0]?.id ?? '');
   const [value, setValue] = useState('');
   const [key, setKey] = useState('');
   const [keyTouched, setKeyTouched] = useState(false);
 
-  const suggested = useMemo(() => toPascalCaseKey(value), [value]);
+  const selectedFamily = useMemo(
+    () => families.find((f) => f.id === familyId) ?? families[0],
+    [families, familyId]
+  );
+  const jsonFamily = selectedFamily ? isI18nFamily(selectedFamily) : false;
+
+  const suggested = useMemo(
+    () => (jsonFamily ? toCamelCaseKey(value) : toPascalCaseKey(value)),
+    [value, jsonFamily]
+  );
 
   const effectiveKey =
     keyNaming === 'pascalFromNeutral' && !keyTouched ? suggested : key;

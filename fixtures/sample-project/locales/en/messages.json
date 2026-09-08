@@ -1,0 +1,13 @@
+{
+  "actions": {
+    "ok": "Ok",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save"
+  },
+  "loading": "Loading...",
+  "areYouSure": "Are you sure?",
+  "anErrorOccurred0": "An error occurred: {0}",
+  "warning": "Warning"
+}

@@ -33,6 +33,7 @@ import {
   resolveDesignerMeta,
   writeDesignerCs,
   resolveResxIdentity,
+  toCamelCaseKey,
   toPascalCaseKey,
   mergeVisibleLocales,
   buildExcelPayload,
@@ -402,8 +403,8 @@ export class ResourceIndex {
     }
     let finalKey = key.trim();
     const isJson = isI18nFamily(family);
-    if (!finalKey && this.settings.keyNaming === 'pascalFromNeutral' && !isJson) {
-      finalKey = toPascalCaseKey(neutralValue);
+    if (!finalKey && this.settings.keyNaming === 'pascalFromNeutral') {
+      finalKey = isJson ? toCamelCaseKey(neutralValue) : toPascalCaseKey(neutralValue);
     }
     if (!finalKey) {
       finalKey = 'NewKey';

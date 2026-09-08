@@ -1,0 +1,12 @@
+{
+  "actions": {
+    "ok": "OK",
+    "retry": "Tentar novamente",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "save": "Guardar"
+  },
+  "areYouSure": "Tem a certeza?",
+  "anErrorOccurred0": "Ocorreu um erro: {0}",
+  "warning": "Aviso"
+}

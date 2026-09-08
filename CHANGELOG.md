@@ -1,11 +1,24 @@
 # Changelog
 
-## 0.2.2
+## 0.2.3
 
 ### JSON i18n (VS Code)
 - Nested `locales/<locale>/*.json` (and `.i18n`) families can be edited in the same grid as `.resx`
-- Config files such as `package.json` are ignored; PascalCase naming is not applied to JSON keys
+- Config files such as `package.json` are ignored
 - Activity Bar file-type filter: all / `.resx` / JSON
+- Nested objects flatten to dot-keys in the grid and unflatten on save
+
+### JSON i18n naming (VS Code)
+- Naming suggestions and the key-naming rule also apply to nested JSON families
+- Nested paths stay intact; only the leaf is suggested as **camelCase** from the English value (e.g. `welcome.message` → `welcome.welcomeToResXGuard`)
+- Placeholders such as `{0}` / `{name}` are ignored when suggesting names (no more `Hello0`)
+- Adding a key with an empty name in a JSON family uses camelCase from the English value
+- `.resx` families keep PascalCase from English as before
+
+### Docs
+- README reframed around multi-format support (`.resx` + nested JSON i18n in VS Code; Visual Studio remains `.resx`)
+
+## 0.2.2
 
 ### Key naming
 - **Type the key myself** skips PascalCase naming warnings and revalidates the grid as soon as you switch

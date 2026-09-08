@@ -1,0 +1,22 @@
+{
+  "welcome": {
+    "message": "Bem-vindo ao ResX Guard"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "saveChanges": "Guardar alterações",
+    "deleteFile": "Eliminar ficheiro?"
+  },
+  "items": {
+    "found": "{0} itens encontrados",
+    "foundBad": "Encontrados itens"
+  },
+  "confirms": "Confirm",
+  "helpHint": "Prima F1 para ajuda",
+  "importFailed": "Falha na importação: {0}",
+  "exportComplete": "Exportação concluída com sucesso.",
+  "untitled_key": "sem título",
+  "addressLine": "Linha um\nLinha dois",
+  "projectHasNoResourceFile": "O projeto não tem ficheiro de recursos.",
+  "longKeyThatShouldNotBreakTheSummaryPanelLayoutWhenDisplayed": "Uma chave muito longa para testar o layout"
+}

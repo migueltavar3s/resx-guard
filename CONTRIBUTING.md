@@ -7,7 +7,7 @@ packages/core-ts/   Shared domain logic (parser, validation, Excel, designer)
 packages/ui/      React webview UI (VS Code + Visual Studio WebView2)
 apps/vscode/      VS Code extension host
 apps/visualstudio/ Visual Studio VSIX + C# core port
-fixtures/         Sample C# project for manual testing
+fixtures/         Sample projects for manual testing (`sample-project` has `.resx` + JSON i18n; `i18n-web` is JSON-only)
 test/             Vitest tests (core-ts contract)
 ```
 
@@ -37,7 +37,8 @@ npm run package -w resx-guard
 
 1. Open this repo in VS Code / Cursor
 2. Press **F5** (Run Extension — sample project)
-3. Extension Development Host opens `fixtures/sample-project`
+3. Extension Development Host opens `fixtures/sample-project` (`.resx` families plus `locales/en|pt/*.json`)
+4. In the Activity Bar, use **File Types** to filter All / `.resx` / JSON and compare behaviour side by side
 
 ### Visual Studio extension
 

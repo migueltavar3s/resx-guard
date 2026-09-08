@@ -441,7 +441,13 @@ export function App() {
           keyNaming={snapshot.settings.keyNaming}
           onCancel={() => setShowAdd(false)}
           onConfirm={(familyId, key, neutralValue) => {
-            const finalKey = resolveAddedKey(key, neutralValue, snapshot.settings.keyNaming);
+            const family = snapshot.families.find((f) => f.id === familyId);
+            const finalKey = resolveAddedKey(
+              key,
+              neutralValue,
+              snapshot.settings.keyNaming,
+              family
+            );
             pendingRevealRef.current = { familyId, key: finalKey };
             setFilters(emptyColumnFilters());
             setTab('main');

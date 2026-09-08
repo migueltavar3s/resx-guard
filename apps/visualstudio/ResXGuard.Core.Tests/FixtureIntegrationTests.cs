@@ -39,6 +39,8 @@ public class NamingTests
     {
         Assert.Equal("InvalidResourceFile", Naming.ToPascalCaseKey("Invalid resource file:"));
         Assert.Equal("SaveFailed", Naming.ToPascalCaseKey("Save failed."));
+        Assert.Equal("Hello", Naming.ToPascalCaseKey("Hello {0}"));
+        Assert.Equal("DuplicateKeysIn", Naming.ToPascalCaseKey("Duplicate keys in '{0}': {1}"));
     }
 }
 

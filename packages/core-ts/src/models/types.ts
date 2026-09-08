@@ -20,7 +20,7 @@ export interface ValidationIssue {
   locale?: string;
   key: string;
   familyId: string;
-  /** PascalCase key suggestion for `keyPascalCase` issues. */
+  /** Key suggestion for naming issues (PascalCase for .resx, camelCase leaf for JSON). */
   suggestedKey?: string;
 }
 

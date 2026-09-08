@@ -8,6 +8,8 @@ import {
   parseLocaleFromFileName,
   placeholdersMatch,
   resolveResxIdentity,
+  suggestedI18nKey,
+  toCamelCaseKey,
   toPascalCaseKey,
 } from '@resx-guard/core-ts';
 
@@ -15,13 +17,32 @@ describe('toPascalCaseKey', () => {
   it('converts English phrases to PascalCase', () => {
     expect(toPascalCaseKey('Invalid resource file:')).toBe('InvalidResourceFile');
     expect(toPascalCaseKey('Save failed.')).toBe('SaveFailed');
-    expect(toPascalCaseKey("Duplicate keys in '{0}': {1}")).toBe('DuplicateKeysIn01');
+    expect(toPascalCaseKey("Duplicate keys in '{0}': {1}")).toBe('DuplicateKeysIn');
+    expect(toPascalCaseKey('Hello {0}')).toBe('Hello');
+    expect(toPascalCaseKey('Found {count} items')).toBe('FoundItems');
   });
 
   it('handles empty and digit-leading', () => {
     expect(toPascalCaseKey('')).toBe('');
     expect(toPascalCaseKey('!!!')).toBe('');
     expect(toPascalCaseKey('123 abc')).toBe('N123Abc');
+  });
+});
+
+describe('toCamelCaseKey and suggestedI18nKey', () => {
+  it('converts English phrases to camelCase leaves', () => {
+    expect(toCamelCaseKey('Open settings')).toBe('openSettings');
+    expect(toCamelCaseKey('Welcome to ResX Guard')).toBe('welcomeToResXGuard');
+    expect(toCamelCaseKey('Hello {0}')).toBe('hello');
+  });
+
+  it('preserves the nested path and only replaces the leaf', () => {
+    expect(suggestedI18nKey('welcome.message', 'Welcome to ResX Guard')).toBe(
+      'welcome.welcomeToResXGuard'
+    );
+    expect(suggestedI18nKey('actions.openSettings', 'Open settings')).toBe('actions.openSettings');
+    expect(suggestedI18nKey('untitled_key', 'untitled')).toBe('untitled');
+    expect(suggestedI18nKey('hello', 'Hello {0}')).toBe('hello');
   });
 });
 

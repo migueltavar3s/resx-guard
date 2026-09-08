@@ -205,23 +205,39 @@ describe('i18n validation', () => {
     };
   }
 
-  it('skips PascalCase naming but still flags placeholder mismatches', () => {
+  it('suggests camelCase leaves for JSON while keeping the nested path', () => {
     const files: ResxFile[] = [
       {
         path: '/app/locales/en/translation.json',
         locale: 'en',
         duplicateKeys: [],
-        entries: [{ key: 'navigation.dashboard', value: 'Hello {0}', comment: '' }],
+        entries: [
+          { key: 'navigation.dashboard', value: 'Dashboard', comment: '' },
+          { key: 'untitled_key', value: 'untitled', comment: '' },
+          { key: 'greeting', value: 'Hello {0}', comment: '' },
+        ],
       },
       {
         path: '/app/locales/pt/translation.json',
         locale: 'pt',
         duplicateKeys: [],
-        entries: [{ key: 'navigation.dashboard', value: 'Olá {1}', comment: '' }],
+        entries: [
+          { key: 'navigation.dashboard', value: 'Olá {1}', comment: '' },
+          { key: 'untitled_key', value: 'sem título', comment: '' },
+          { key: 'greeting', value: 'Olá {0}', comment: '' },
+        ],
       },
     ];
     const issues = validateFamily(jsonFamily(), files, rules);
-    expect(issues.some((i) => i.rule === 'keyPascalCase')).toBe(false);
+    expect(issues.some((i) => i.rule === 'keyPascalCase' && i.key === 'navigation.dashboard')).toBe(
+      false
+    );
+    expect(issues.find((i) => i.rule === 'keyPascalCase' && i.key === 'untitled_key')?.suggestedKey).toBe(
+      'untitled'
+    );
+    expect(issues.find((i) => i.rule === 'keyPascalCase' && i.key === 'greeting')?.suggestedKey).toBe(
+      'hello'
+    );
     expect(issues.some((i) => i.rule === 'placeholders')).toBe(true);
   });
 

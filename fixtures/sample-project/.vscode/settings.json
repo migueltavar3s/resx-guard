@@ -1,4 +1,4 @@
 {
     "resxGuard.keyNaming": "pascalFromNeutral",
-    "resxGuard.namingSuggestions": false
+    "resxGuard.namingSuggestions": true
 }

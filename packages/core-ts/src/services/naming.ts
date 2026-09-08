@@ -282,6 +282,7 @@ export function normalizePathKey(filePath: string): string {
 /**
  * Convert a human string into a PascalCase C# identifier.
  * "Invalid resource file:" → "InvalidResourceFile"
+ * Placeholders like {0} / {name} are ignored so they do not become "Hello0".
  */
 export function toPascalCaseKey(input: string): string {
   if (!input) {
@@ -291,6 +292,7 @@ export function toPascalCaseKey(input: string): string {
   const cleaned = input
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\{[^{}]+\}/g, ' ')
     .replace(/[''`´]/g, '')
     .replace(/[^a-zA-Z0-9]+/g, ' ')
     .trim();
@@ -309,6 +311,34 @@ export function toPascalCaseKey(input: string): string {
   }
 
   return result;
+}
+
+/**
+ * Convert a human string into a camelCase i18n leaf identifier.
+ * "Open settings" → "openSettings"
+ */
+export function toCamelCaseKey(input: string): string {
+  const pascal = toPascalCaseKey(input);
+  if (!pascal) {
+    return '';
+  }
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+/**
+ * Suggested key for nested JSON i18n: keep the dotted path, replace only the leaf.
+ * `welcome.message` + "Welcome to ResX Guard" → `welcome.welcomeToResXGuard`
+ */
+export function suggestedI18nKey(currentKey: string, neutralValue: string): string {
+  const leaf = toCamelCaseKey(neutralValue);
+  if (!leaf) {
+    return '';
+  }
+  const lastDot = currentKey.lastIndexOf('.');
+  if (lastDot > 0) {
+    return `${currentKey.slice(0, lastDot)}.${leaf}`;
+  }
+  return leaf;
 }
 
 /** Extract format placeholders like {0}, {1}, {name}. */
